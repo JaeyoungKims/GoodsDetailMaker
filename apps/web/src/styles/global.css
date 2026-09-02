@@ -369,13 +369,6 @@ p {
   color: #fff;
   font-weight: 600;
 }
-.login-card [role="status"] {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--info-soft);
-  color: var(--info-text);
-  font-size: 13px;
-}
 
 /* 설정 */
 .settings-hero {
@@ -552,5 +545,113 @@ p {
   }
   .studio-topbar__meta p {
     display: none;
+  }
+}
+
+/* 로그인: 단계 안내 · Turnstile · 보안 안내 */
+.login-flow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.login-flow li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+}
+.login-flow > li > span {
+  color: var(--primary-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+.login-flow p {
+  display: grid;
+  gap: 2px;
+}
+.login-flow strong {
+  font-size: 13px;
+}
+.login-flow small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.turnstile {
+  display: grid;
+  gap: 6px;
+}
+.turnstile-frame {
+  min-height: 65px;
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.turnstile-frame:empty {
+  border: 1px dashed var(--line-strong);
+  background: var(--surface-2);
+}
+.turnstile-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+.turnstile-retry {
+  justify-self: start;
+  min-height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+}
+.login-message {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--info-soft);
+  color: var(--info-text);
+  font-size: 13px;
+}
+.login-security {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.login-security > span {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 11px;
+  font-weight: 700;
+}
+.login-security p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+.login-security strong {
+  font-size: 12px;
+}
+.login-security small {
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-width: 640px) {
+  .login-flow {
+    grid-template-columns: 1fr;
   }
 }
