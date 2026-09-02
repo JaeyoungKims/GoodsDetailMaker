@@ -100,7 +100,9 @@ describe("planSections repair loop", () => {
   it("수정 후에도 틀리면 IMAGE_RESPONSE_INVALID", async () => {
     const fetchImpl = (async () =>
       new Response(JSON.stringify({ output_text: "not json" }), { status: 200 })) as typeof fetch;
-    await expect(planSections("sk-test", { brief, images: [] }, { fetchImpl })).rejects.toMatchObject({
+    await expect(
+      planSections("sk-test", { brief, images: [] }, { fetchImpl }),
+    ).rejects.toMatchObject({
       kind: "IMAGE_RESPONSE_INVALID",
     });
   });
