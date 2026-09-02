@@ -58,8 +58,8 @@ export function NewJobPage() {
           onClick={() => navigate("/")}
           aria-label="제작실 홈으로"
         >
-          <span aria-hidden="true">D</span>
-          <strong>Detail Studio</strong>
+          <span aria-hidden="true">GD</span>
+          <strong>Goods Detail</strong>
         </button>
         <div className="studio-topbar__meta">
           <span>BYOK</span>
