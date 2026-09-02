@@ -1,4 +1,11 @@
 import {
+  buildRepairPrompt,
+  buildSystemPrompt,
+  buildUserPrompt,
+  PLAN_JSON_SCHEMA,
+} from "./planPrompt.js";
+import {
+  BULLETS_MAX,
   IMAGE_HEIGHT,
   IMAGE_MODEL,
   IMAGE_QUALITY,
@@ -10,8 +17,8 @@ import {
 } from "@gdm/shared";
 
 const OPENAI_BASE = "https://api.openai.com/v1";
-/** 기획(텍스트) 모델. 프롬프트와 함께 추후 튜닝 대상. */
-const PLAN_MODEL = "gpt-5-mini";
+/** 기획(텍스트) 모델 기본값. env.PLAN_MODEL 로 덮어쓴다. */
+export const PLAN_MODEL = "gpt-5-mini";
 
 export class OpenAiError extends Error {
   constructor(
@@ -47,35 +54,83 @@ export interface PlanInput {
   images: Array<{ bytes: ArrayBuffer; contentType: string }>;
 }
 
+export interface PlanOptions {
+  /** 기획 텍스트 모델. env.PLAN_MODEL 로 바꿀 수 있다. */
+  model?: string;
+  /** 검증 실패 시 수정 요청 횟수 (기본 1) */
+  repairRounds?: number;
+  /** 테스트 주입용 */
+  fetchImpl?: typeof fetch;
+}
+
+type ResponseInputItem =
+  | { role: "system" | "user" | "assistant"; content: string }
+  | { role: "user"; content: Array<Record<string, unknown>> };
+
 /**
- * 기획 1회: 13개 섹션 설계를 구조화 출력으로 받는다.
- * TODO(prompt): 스토리 순서(storyOrder)를 role 슬롯에 매핑하는 규칙, 금지 표현, 근거 없는 주장 억제 규칙을
- * docs/reference/detail-page-studio-analysis.md 7절 기준으로 시스템 프롬프트에 반영한다.
+ * 기획 1회: 13개 섹션 설계를 structured output 으로 받는다.
+ * 검증에 실패하면 오류 목록을 붙여 같은 대화에서 한 번 더 고치게 한다.
  */
-export async function planSections(apiKey: string, input: PlanInput): Promise<SectionPlan[]> {
+export async function planSections(
+  apiKey: string,
+  input: PlanInput,
+  options: PlanOptions = {},
+): Promise<SectionPlan[]> {
+  const model = options.model ?? PLAN_MODEL;
+  const repairRounds = options.repairRounds ?? 1;
+  const fetchImpl = options.fetchImpl ?? fetch;
+
   const imageParts = input.images.map((img) => ({
     type: "input_image",
     image_url: `data:${img.contentType};base64,${base64(img.bytes)}`,
     detail: "low",
   }));
+  const conversation: ResponseInputItem[] = [
+    { role: "system", content: buildSystemPrompt() },
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: buildUserPrompt({ brief: input.brief, imageCount: input.images.length }),
+        },
+        ...imageParts,
+      ],
+    },
+  ];
 
-  const response = await fetch(`${OPENAI_BASE}/responses`, {
+  let lastIssues: string[] = [];
+  for (let round = 0; round <= repairRounds; round += 1) {
+    const text = await requestPlan(fetchImpl, apiKey, model, conversation);
+    const parsed = parsePlanText(text);
+    if (parsed.ok) return parsed.sections;
+    lastIssues = parsed.issues;
+    conversation.push({ role: "assistant", content: text });
+    conversation.push({ role: "user", content: buildRepairPrompt(parsed.issues) });
+  }
+  throw new OpenAiError(
+    "IMAGE_RESPONSE_INVALID",
+    `plan invalid after repair: ${lastIssues.slice(0, 3).join("; ")}`,
+  );
+}
+
+async function requestPlan(
+  fetchImpl: typeof fetch,
+  apiKey: string,
+  model: string,
+  conversation: ResponseInputItem[],
+): Promise<string> {
+  const response = await fetchImpl(`${OPENAI_BASE}/responses`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: PLAN_MODEL,
-      input: [
-        { role: "system", content: PLAN_SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [{ type: "input_text", text: JSON.stringify(input.brief) }, ...imageParts],
-        },
-      ],
+      model,
+      input: conversation,
       text: {
         format: {
           type: "json_schema",
           name: "detail_page_plan",
-          strict: false,
+          strict: true,
           schema: PLAN_JSON_SCHEMA,
         },
       },
@@ -83,22 +138,66 @@ export async function planSections(apiKey: string, input: PlanInput): Promise<Se
   }).catch(() => {
     throw new OpenAiError("IMAGE_NETWORK_FAILED");
   });
-
   if (!response.ok) throw classifyStatus(response.status, response.headers.get("retry-after"));
-
   const body = (await response.json()) as { output_text?: string; output?: unknown };
-  const text = body.output_text ?? extractOutputText(body.output);
-  let parsed: unknown;
+  return body.output_text ?? extractOutputText(body.output);
+}
+
+/** 모델 출력 → 가벼운 정규화 → zod 검증. 실패하면 사람이 읽을 수 있는 오류 목록을 돌려준다. */
+export function parsePlanText(
+  text: string,
+): { ok: true; sections: SectionPlan[] } | { ok: false; issues: string[] } {
+  let raw: unknown;
   try {
-    parsed = JSON.parse(text);
+    raw = JSON.parse(stripCodeFence(text));
   } catch {
-    throw new OpenAiError("IMAGE_RESPONSE_INVALID", "plan is not JSON");
+    return {
+      ok: false,
+      issues: ["출력이 JSON 이 아니다. 코드펜스·설명 없이 JSON 객체만 출력할 것."],
+    };
   }
-  const result = sectionPlanListSchema.safeParse(parsed);
-  if (!result.success) {
-    throw new OpenAiError("IMAGE_RESPONSE_INVALID", result.error.message);
-  }
-  return result.data.sections;
+  const normalized = normalizePlan(raw);
+  const result = sectionPlanListSchema.safeParse(normalized);
+  if (result.success) return { ok: true, sections: result.data.sections };
+  const issues = result.error.issues.map((issue) => {
+    const path = issue.path.map(String).join(".");
+    return `${path || "(root)"}: ${issue.message}`;
+  });
+  return { ok: false, issues: [...new Set(issues)] };
+}
+
+function stripCodeFence(text: string): string {
+  const trimmed = text.trim();
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
+  return fenced?.[1] ?? trimmed;
+}
+
+const squash = (v: unknown) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim() : v);
+
+/** 공백 정리, 빈 불릿 제거, 불릿 수 제한, renderMode 기본값. 길이 초과는 고치지 않고 검증에 맡긴다. */
+function normalizePlan(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || !Array.isArray((raw as { sections?: unknown }).sections))
+    return raw;
+  const sections = (raw as { sections: unknown[] }).sections.map((s) => {
+    if (!s || typeof s !== "object") return s;
+    const sec = s as Record<string, unknown>;
+    const bullets = Array.isArray(sec["bullets"])
+      ? sec["bullets"]
+          .map(squash)
+          .filter((b): b is string => typeof b === "string" && b.length > 0)
+          .slice(0, BULLETS_MAX)
+      : [];
+    return {
+      ...sec,
+      headline: squash(sec["headline"]),
+      subheadline: squash(sec["subheadline"] ?? ""),
+      bullets,
+      visualDirection: squash(sec["visualDirection"]),
+      imagePrompt: squash(sec["imagePrompt"]),
+      renderMode: sec["renderMode"] ?? "browser_overlay",
+    };
+  });
+  return { sections };
 }
 
 export interface ImageInput {
@@ -161,48 +260,3 @@ function extractOutputText(output: unknown): string {
   }
   return "";
 }
-
-const PLAN_SYSTEM_PROMPT = `당신은 한국 이커머스 상세페이지 기획자다.
-상품 브리프(JSON)와 제품 사진을 보고, 구매 퍼널 13장의 설계를 JSON 으로만 출력한다.
-규칙:
-- sections 는 정확히 13개, index 1..13, role 은 HERO, PROBLEM, SOLUTION, BENEFIT_A, BENEFIT_B, DETAIL, USAGE, TRUST, COMPARISON, CTA, REVIEW, GIFT, PRODUCT_INFO 순서로 고정.
-- storyOrder 의 i번째 단계가 index i 의 메시지 목표다.
-- headline ≤ 28자, subheadline ≤ 52자, bullets ≤ 3개·각 ≤ 30자. 모두 한국어.
-- 브리프에 없는 가격·할인·인증·후기·수치는 만들지 않는다. 후기 장은 "편집용 후기 초안"임을 headline 에 밝힌다.
-- prohibitedClaims 에 있는 표현은 쓰지 않는다.
-- imagePrompt 는 영어로, 텍스트 없는 장면 묘사만 쓴다(문구는 브라우저가 얹는다). tone 을 모든 장에 일관되게 반영한다.
-- copyPlacement 는 문구가 제품을 가리지 않는 위치를 고른다.`;
-
-const PLAN_JSON_SCHEMA = {
-  type: "object",
-  properties: {
-    sections: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          index: { type: "integer" },
-          role: { type: "string" },
-          headline: { type: "string" },
-          subheadline: { type: "string" },
-          bullets: { type: "array", items: { type: "string" } },
-          visualDirection: { type: "string" },
-          imagePrompt: { type: "string" },
-          copyPlacement: { type: "string", enum: ["top", "center", "bottom"] },
-          renderMode: { type: "string", enum: ["browser_overlay", "image_model_text"] },
-        },
-        required: [
-          "index",
-          "role",
-          "headline",
-          "subheadline",
-          "bullets",
-          "visualDirection",
-          "imagePrompt",
-          "copyPlacement",
-        ],
-      },
-    },
-  },
-  required: ["sections"],
-} as const;

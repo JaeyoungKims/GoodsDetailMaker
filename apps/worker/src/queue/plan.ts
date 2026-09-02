@@ -22,7 +22,11 @@ export async function handlePlan(env: AppEnv, msg: PlanMessage): Promise<void> {
     if (!apiKey) throw new OpenAiError("OPENAI_API_KEY_INVALID", "API_KEY_REQUIRED");
 
     const images = await loadInputImages(env, db, job.id);
-    const sections = await planSections(apiKey, { brief: job.brief, images });
+    const sections = await planSections(
+      apiKey,
+      { brief: job.brief, images },
+      env.PLAN_MODEL ? { model: env.PLAN_MODEL } : {},
+    );
     await insertPlannedSections(db, msg.userId, job.id, sections);
     await updateJobStatus(db, job.id, "generating");
 

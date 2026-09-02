@@ -46,10 +46,16 @@ supabase        Postgres 마이그레이션 (jobs / job_inputs / job_sections / 
 | 게이트 지연         | 5→30초 점증, 최대 60회 후 `IMAGE_DISPATCH_EXHAUSTED` | 메시지 `deferrals` (attempt 와 별개)                 |
 | 죽은 워커 복구      | 10분 넘게 generating → failed                        | cron 15분                                            |
 
+## 기획 프롬프트 (apps/worker/src/services/planPrompt.ts)
+
+- 시스템 프롬프트: 출력 계약(13개·index·role 슬롯·길이), 절대 규칙 5개(사실 날조 금지, 금지 표현, 사진 일치, 스타일 일관·구도 다양, 대체 규칙), 단계별 목표와 정보 없을 때의 대체 규칙, 스타일 8종 시각 방향, 카피 작법.
+- 사용자 프롬프트: 브리프를 구조화하고 비어 있는 항목마다 대체 규칙을 붙인다. storyOrder 를 `i. 단계 → role 슬롯` 으로 나열해 두 축을 분리한다. 레거시 tone 은 새 tone 으로 매핑.
+- 출력: Responses API structured output(strict JSON schema) → 공백·빈 불릿 정규화 → zod 검증. 실패하면 오류 목록을 붙여 같은 대화에서 1회 수정 요청, 그래도 실패하면 `IMAGE_RESPONSE_INVALID`.
+- 모델: `PLAN_MODEL` 환경변수(기본 gpt-5-mini). 이미지는 `detail: "low"` 로 첨부해 토큰을 아낀다.
+
 ## 아직 골격만 있는 부분 (TODO)
 
-| 영역          | 파일                               | 내용                                                          |
-| ------------- | ---------------------------------- | ------------------------------------------------------------- |
-| 기획 프롬프트 | apps/worker/src/services/openai.ts | 시스템 프롬프트 튜닝, 모델 선택, 스토리 순서 ↔ role 매핑 규칙 |
-| 정보 페이지   | apps/web/src/pages/InfoPage.tsx    | 개인정보·이용조건·도움말 본문                                 |
-| E2E           | -                                  | 실제 Supabase·Cloudflare 환경에서 생성 흐름 검증              |
+| 영역        | 파일                            | 내용                                             |
+| ----------- | ------------------------------- | ------------------------------------------------ |
+| 정보 페이지 | apps/web/src/pages/InfoPage.tsx | 개인정보·이용조건·도움말 본문                    |
+| E2E         | -                               | 실제 Supabase·Cloudflare 환경에서 생성 흐름 검증 |

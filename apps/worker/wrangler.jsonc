@@ -19,6 +19,7 @@
   "vars": {
     "APP_ENV": "development",
     "IMAGE_GENERATION_ENABLED": "true",
+    "PLAN_MODEL": "gpt-5-mini",
     "SUPABASE_URL": "https://<project-ref>.supabase.co",
   },
 
