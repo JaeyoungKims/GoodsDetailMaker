@@ -23,11 +23,22 @@ export const USER_STORAGE_QUOTA_BYTES = 250 * 1024 * 1024;
 export const SERVICE_STORAGE_QUOTA_BYTES = 8 * 1024 * 1024 * 1024;
 export const JOB_RETENTION_HOURS = 24;
 
+/** 작업 수 한도 */
+export const JOB_ACTIVE_LIMIT = 3;
+export const JOB_DAILY_LIMIT = 10;
+export const UPLOAD_ATTEMPT_MAX = 10;
+/** 생성 시작 시 미리 예약하는 원본 응답 공간 (장당) */
+export const RAW_RESERVE_BYTES_PER_SECTION = 3 * 1024 * 1024;
+
 /** 재시도 정책 */
 export const IMAGE_AUTO_ATTEMPT_MAX = 5;
 export const SECTION_MANUAL_RETRY_MAX = 3;
 export const IMAGE_PARALLELISM_OPTIONS = [5, 10] as const;
 export const IMAGE_PARALLELISM_DEFAULT = 5;
+/** 동시 생성 게이트 때문에 미뤄질 수 있는 최대 횟수 (attempt 와 별개) */
+export const IMAGE_DEFERRAL_MAX = 60;
+/** 이 시간 넘게 generating 이면 죽은 워커로 보고 실패 처리 */
+export const STALE_GENERATING_MINUTES = 10;
 
 /** 카피 길이 제한 */
 export const HEADLINE_MAX = 28;

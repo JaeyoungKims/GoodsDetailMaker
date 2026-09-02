@@ -23,7 +23,12 @@ export async function handleQueueBatch(batch: MessageBatch<unknown>, env: AppEnv
         const outcome = await handleImage(env, msg);
         if (outcome.kind === "retry") {
           await env.JOB_QUEUE.send(
-            { ...msg, attempt: outcome.nextAttempt },
+            { ...msg, attempt: outcome.nextAttempt, deferrals: 0 },
+            { delaySeconds: outcome.delaySeconds },
+          );
+        } else if (outcome.kind === "defer") {
+          await env.JOB_QUEUE.send(
+            { ...msg, deferrals: msg.deferrals + 1 },
             { delaySeconds: outcome.delaySeconds },
           );
         }

@@ -4,7 +4,10 @@ import {
   INPUT_IMAGE_MAX,
   INPUT_IMAGE_MAX_BYTES,
   INPUT_IMAGE_TOTAL_MAX_BYTES,
+  RAW_RESERVE_BYTES_PER_SECTION,
+  SECTION_COUNT,
   SECTION_MANUAL_RETRY_MAX,
+  UPLOAD_ATTEMPT_MAX,
   productBriefSchema,
   sectionCopyUpdateSchema,
 } from "@gdm/shared";
@@ -13,6 +16,7 @@ import { ApiError } from "../lib/errors.js";
 import { createServiceClient } from "../services/supabase.js";
 import { getObject, putObject, r2Keys } from "../services/storage.js";
 import { getSettings } from "../services/settings.js";
+import { assertJobLimits, assertStorageQuota } from "../services/limits.js";
 import { findJob, listSections, toJob, toSection, type SectionRow } from "../services/jobs.js";
 
 const uuid = z.uuid();
@@ -47,7 +51,7 @@ export const jobRoutes = new Hono<HonoEnv>()
     const existing = await findJob(db, user.id, idempotencyKey.data);
     if (existing) return c.json({ id: existing.id });
 
-    // TODO(limits): JOB_ACTIVE_LIMIT / JOB_DAILY_LIMIT 집계 후 거부
+    await assertJobLimits(db, user.id);
     const { error } = await db.from("jobs").insert({
       id: idempotencyKey.data,
       user_id: user.id,
@@ -76,14 +80,18 @@ export const jobRoutes = new Hono<HonoEnv>()
 
     const { data: inputs, error: listError } = await db
       .from("job_inputs")
-      .select("id, byte_size")
+      .select("id, byte_size, upload_attempts")
       .eq("job_id", job.id);
     if (listError) throw new ApiError("INTERNAL_ERROR", 500);
+    const existing = (inputs ?? []).find((i) => i.id === inputId.data);
     const others = (inputs ?? []).filter((i) => i.id !== inputId.data);
     if (others.length >= INPUT_IMAGE_MAX) throw new ApiError("JOB_INPUT_LIMIT", 409);
     const total = others.reduce((sum, i) => sum + Number(i.byte_size), 0) + size;
     if (total > INPUT_IMAGE_TOTAL_MAX_BYTES) throw new ApiError("JOB_INPUT_BYTES_LIMIT", 413);
-    // TODO(quota): 사용자 250MB / 서비스 8GB 집계 → STORAGE_QUOTA_LIMIT
+    const attempts = Number(existing?.upload_attempts ?? 0);
+    if (attempts >= UPLOAD_ATTEMPT_MAX) throw new ApiError("JOB_UPLOAD_ATTEMPT_LIMIT", 429);
+    // 같은 inputId 재업로드는 이전 크기를 빼고 계산한다
+    await assertStorageQuota(db, job.user_id, size - Number(existing?.byte_size ?? 0));
 
     const key = r2Keys.input(job.user_id, job.id, inputId.data);
     const body = c.req.raw.body;
@@ -100,6 +108,7 @@ export const jobRoutes = new Hono<HonoEnv>()
         content_type: "image/jpeg",
         byte_size: size,
         status: "stored",
+        upload_attempts: attempts + 1,
       },
       { onConflict: "id" },
     );
@@ -118,12 +127,19 @@ export const jobRoutes = new Hono<HonoEnv>()
       .eq("status", "stored");
     if (!count) throw new ApiError("PRODUCT_IMAGE_REQUIRED", 412);
 
-    const { error } = await db.from("jobs").update({ status: "queued" }).eq("id", job.id);
+    // 원본 응답 13장분 공간을 미리 예약한다. 한도에 걸리면 시작하지 않는다.
+    const reserved = SECTION_COUNT * RAW_RESERVE_BYTES_PER_SECTION;
+    await assertStorageQuota(db, job.user_id, reserved);
+
+    const { error } = await db
+      .from("jobs")
+      .update({ status: "queued", reserved_bytes: reserved })
+      .eq("id", job.id);
     if (error) throw new ApiError("INTERNAL_ERROR", 500);
     try {
       await c.env.JOB_QUEUE.send({ kind: "plan", userId: job.user_id, jobId: job.id });
     } catch {
-      await db.from("jobs").update({ status: "draft" }).eq("id", job.id);
+      await db.from("jobs").update({ status: "draft", reserved_bytes: 0 }).eq("id", job.id);
       throw new ApiError("QUEUE_UNAVAILABLE", 503);
     }
     return c.json({ queued: true as const });
