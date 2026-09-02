@@ -655,3 +655,45 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* 정보 페이지 본문 */
+.info-sections {
+  display: grid;
+  gap: 14px;
+  margin-top: 32px;
+}
+.info-sections section {
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.info-sections h2 {
+  margin-bottom: 10px;
+  font-size: 17px;
+}
+.info-sections p,
+.info-sections li {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.8;
+  word-break: keep-all;
+}
+.info-sections p + p {
+  margin-top: 8px;
+}
+.info-sections ul,
+.info-sections ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}
+.info-sections strong {
+  color: var(--ink);
+}
+.info-sections a {
+  color: var(--primary-text);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
