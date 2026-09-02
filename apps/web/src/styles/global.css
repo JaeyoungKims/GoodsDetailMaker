@@ -204,10 +204,9 @@ button:disabled {
   font-weight: 800;
 }
 
-/* 새 작업 / 설정 / 작업 화면 공통 카드 */
-.studio-topbar,
+/* 설정 화면 */
 .settings-nav {
-  width: min(1260px, calc(100% - 40px));
+  width: min(1120px, calc(100% - 40px));
   min-height: 74px;
   display: flex;
   align-items: center;
@@ -216,45 +215,17 @@ button:disabled {
   margin: 0 auto;
   border-bottom: 1px solid rgba(35, 58, 42, 0.12);
 }
-.studio-brand {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: var(--ink);
-}
-.studio-brand > span {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border-radius: 11px 11px 3px;
-  background: var(--green);
-  color: #f6d89e;
-  font-family: Georgia, serif;
-  font-size: 20px;
-  font-weight: 700;
-}
-.creation-hero,
 .settings-hero {
-  width: min(1260px, calc(100% - 40px));
+  width: min(1120px, calc(100% - 40px));
   margin: 0 auto;
   padding: 56px 0 32px;
 }
-.creation-hero h1,
 .settings-hero h1 {
   margin: 0;
   font-size: clamp(40px, 6vw, 68px);
   line-height: 1.08;
   letter-spacing: -0.06em;
 }
-.creation-hero h1 em {
-  color: var(--green);
-  font-style: normal;
-}
-.form-card,
 .settings-card,
 .section-card {
   width: min(1260px, calc(100% - 40px));
