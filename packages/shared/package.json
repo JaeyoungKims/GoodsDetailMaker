@@ -1,0 +1,21 @@
+{
+  "name": "@gdm/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "웹과 워커가 함께 쓰는 도메인 상수·zod 스키마·에러 코드",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

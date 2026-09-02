@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "goods-detail-maker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": { "enabled": true },
+
+  // SPA 정적 에셋: apps/web 빌드 결과. /api/* 는 Worker 가 먼저 받는다.
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+
+  // 공개 설정값. 비밀은 .dev.vars / `wrangler secret put` 으로 넣는다.
+  "vars": {
+    "APP_ENV": "development",
+    "IMAGE_GENERATION_ENABLED": "true",
+    "SUPABASE_URL": "https://<project-ref>.supabase.co",
+  },
+
+  "r2_buckets": [{ "binding": "ARTIFACTS", "bucket_name": "goods-detail-maker-artifacts" }],
+
+  "queues": {
+    "producers": [{ "binding": "JOB_QUEUE", "queue": "goods-detail-maker-jobs" }],
+    "consumers": [
+      {
+        "queue": "goods-detail-maker-jobs",
+        "max_batch_size": 5,
+        "max_batch_timeout": 2,
+        "max_retries": 5,
+        "max_concurrency": 2,
+        "dead_letter_queue": "goods-detail-maker-jobs-dlq",
+      },
+    ],
+  },
+
+  // 24시간 지난 작업·이미지 정리
+  "triggers": { "crons": ["*/15 * * * *"] },
+}

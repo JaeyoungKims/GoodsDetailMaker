@@ -1,0 +1,31 @@
+{
+  "name": "goods-detail-maker",
+  "private": true,
+  "version": "0.1.0",
+  "description": "상품 정보를 한 번 입력하면 구매 퍼널 13장 상세페이지 이미지를 생성하는 BYOK 도구",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter ./apps/* dev",
+    "dev:web": "pnpm --filter @gdm/web dev",
+    "dev:worker": "pnpm --filter @gdm/worker dev",
+    "build": "pnpm --filter @gdm/web build && pnpm --filter @gdm/worker build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "deploy": "pnpm build && pnpm --filter @gdm/worker deploy"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ]
+  }
+}
