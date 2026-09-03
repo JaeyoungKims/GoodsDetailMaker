@@ -612,3 +612,11 @@
     gap: 2px;
   }
 }
+.section-error__detail {
+  display: block;
+  color: #9a3b32;
+  font-size: 11px;
+  line-height: 1.5;
+  word-break: break-all;
+  opacity: 0.85;
+}

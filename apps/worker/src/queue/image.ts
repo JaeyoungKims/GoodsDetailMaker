@@ -49,6 +49,8 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
       .eq("job_id", msg.jobId)
       .eq("section_index", msg.sectionIndex);
 
+  let lastDetail: string | null = null;
+
   // ── 게이트: 감속 중이거나 슬롯이 없으면 미룬다 ──
   const [settings, rateLimitedUntil] = await Promise.all([
     getSettings(db, msg.userId),
@@ -104,10 +106,12 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
     await recomputeJobStatus(db, msg.jobId);
     return { kind: "done" };
   } catch (err) {
+    const detail = (err instanceof Error ? err.message : String(err)).slice(0, 500);
     console.error(
       `[image] job=${msg.jobId} section=${msg.sectionIndex} attempt=${msg.attempt} failed:`,
-      err instanceof OpenAiError ? `${err.kind} ${err.message}` : err,
+      err instanceof OpenAiError ? `${err.kind} ${detail}` : detail,
     );
+    lastDetail = detail;
     if (err instanceof OpenAiError && err.kind === "OPENAI_RATE_LIMIT") {
       if (msg.attempt >= IMAGE_AUTO_ATTEMPT_MAX) return await fail("IMAGE_ATTEMPT_LIMIT");
       await setStatus("waiting_rate_limit", { error_code: "OPENAI_RATE_LIMIT" });
@@ -130,12 +134,12 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
           ? "INPUT_OBJECT_MISSING"
           : "IMAGE_WORKER_FAILED";
     if (msg.attempt >= IMAGE_AUTO_ATTEMPT_MAX) return await fail("IMAGE_ATTEMPT_LIMIT");
-    await setStatus("queued", { error_code: code });
+    await setStatus("queued", { error_code: code, error_detail: detail });
     return { kind: "retry", delaySeconds: 10 * msg.attempt, nextAttempt: msg.attempt + 1 };
   }
 
   async function fail(code: SectionErrorCode): Promise<ImageOutcome> {
-    await setStatus("failed", { error_code: code });
+    await setStatus("failed", { error_code: code, error_detail: lastDetail });
     await recomputeJobStatus(db, msg.jobId);
     return { kind: "failed", code };
   }

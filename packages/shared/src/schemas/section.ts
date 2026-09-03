@@ -111,6 +111,8 @@ export type SectionCopyUpdate = z.infer<typeof sectionCopyUpdateSchema>;
 export const sectionSchema = sectionPlanSchema.extend({
   status: sectionStatusSchema,
   errorCode: z.enum(SECTION_ERROR_CODES).nullable(),
+  /** 실패 사유 원문 (OpenAI 오류 메시지 등). 운영자·사용자가 원인을 볼 수 있게 한다. */
+  errorDetail: z.string().max(500).nullable().optional(),
   copyVersion: z.number().int().min(1),
 });
 export type Section = z.infer<typeof sectionSchema>;

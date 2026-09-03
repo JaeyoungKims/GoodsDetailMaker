@@ -264,6 +264,11 @@ export function SectionCard({
           {section.status === "failed" && (
             <div className="section-error" role="status">
               <p>{sectionErrorMessage(section.errorCode)}</p>
+              {section.errorDetail && (
+                <small className="section-error__detail">
+                  {section.errorCode} · {section.errorDetail}
+                </small>
+              )}
               <button type="button" disabled={retrying} onClick={() => void retry()}>
                 {retrying ? "다시 만드는 중…" : "이 장만 다시 만들기"}
               </button>

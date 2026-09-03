@@ -200,6 +200,7 @@ export const jobRoutes = new Hono<HonoEnv>()
       .update({
         status: "queued",
         error_code: null,
+        error_detail: null,
         attempt: 0,
         manual_retries: section.manual_retries + 1,
       })

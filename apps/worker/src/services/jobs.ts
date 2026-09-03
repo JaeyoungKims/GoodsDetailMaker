@@ -34,6 +34,7 @@ export interface SectionRow {
   render_mode: string;
   status: string;
   error_code: string | null;
+  error_detail?: string | null;
   copy_version: number;
   attempt: number;
   manual_retries: number;
@@ -53,6 +54,7 @@ export function toSection(row: SectionRow): Section {
     renderMode: row.render_mode as Section["renderMode"],
     status: row.status as Section["status"],
     errorCode: row.error_code as Section["errorCode"],
+    errorDetail: row.error_detail ?? null,
     copyVersion: row.copy_version,
   };
 }
