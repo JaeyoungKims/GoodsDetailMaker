@@ -26,7 +26,7 @@ pnpm install
 cp .env.example apps/web/.env.local        # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
 # 3) 워커 비밀
 cp apps/worker/.dev.vars.example apps/worker/.dev.vars
-#    SUPABASE_SERVICE_ROLE_KEY 등 채우기, wrangler.jsonc 의 SUPABASE_URL 수정
+#    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 등 채우기 (wrangler.jsonc 는 수정하지 않음)
 
 pnpm dev          # web(5173) + worker(8787) 동시 실행. /api 는 vite 가 8787 로 프록시
 pnpm typecheck

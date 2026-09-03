@@ -160,6 +160,7 @@ ENV
 
 # 워커 (비밀값)
 cat > apps/worker/.dev.vars <<'ENV'
+SUPABASE_URL=https://<ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_…
 TURNSTILE_SECRET_KEY=0x4AAAAAA…
 SUPABASE_JWT_SECRET=
