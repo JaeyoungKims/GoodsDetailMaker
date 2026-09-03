@@ -421,7 +421,7 @@
   color: var(--muted);
   font-size: 13px;
 }
-.section-preview > div > button {
+.section-preview > div:not(.section-preview__result) > button {
   min-height: 36px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
