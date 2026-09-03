@@ -15,7 +15,7 @@ import {
 import { imageGenerationEnabled, type HonoEnv } from "../env.js";
 import { ApiError } from "../lib/errors.js";
 import { createServiceClient } from "../services/supabase.js";
-import { getObject, putObject, r2Keys } from "../services/storage.js";
+import { deletePrefix, getObject, putObject, r2Keys } from "../services/storage.js";
 import { getSettings } from "../services/settings.js";
 import { assertJobLimits, assertStorageQuota } from "../services/limits.js";
 import { findJob, listSections, toJob, toSection, type SectionRow } from "../services/jobs.js";
@@ -31,6 +31,22 @@ async function requireJob(c: Context<HonoEnv>) {
   if (!job) throw new ApiError("JOB_NOT_FOUND", 404);
   if (new Date(job.expires_at).getTime() < Date.now()) throw new ApiError("JOB_EXPIRED", 410);
   return { db, job };
+}
+
+async function discardDrafts(
+  db: ReturnType<typeof createServiceClient>,
+  env: HonoEnv["Bindings"],
+  userId: string,
+) {
+  const { data: drafts } = await db
+    .from("jobs")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "draft");
+  for (const draft of drafts ?? []) {
+    await deletePrefix(env, r2Keys.jobPrefix(userId, draft.id as string)).catch(() => 0);
+    await db.from("jobs").delete().eq("id", draft.id); // job_inputs 는 cascade
+  }
 }
 
 export const jobRoutes = new Hono<HonoEnv>()
@@ -52,6 +68,8 @@ export const jobRoutes = new Hono<HonoEnv>()
     const existing = await findJob(db, user.id, idempotencyKey.data);
     if (existing) return c.json({ id: existing.id });
 
+    // 새 작업을 만든다는 건 이전 초안을 포기했다는 뜻이다. 남아 있는 초안과 업로드 파일을 정리한다.
+    await discardDrafts(db, c.env, user.id);
     await assertJobLimits(db, user.id);
     const { error } = await db.from("jobs").insert({
       id: idempotencyKey.data,

@@ -7,7 +7,8 @@ import {
 } from "@gdm/shared";
 import { ApiError } from "../lib/errors.js";
 
-const ACTIVE_STATUSES = ["draft", "queued", "planning", "generating"] as const;
+/** 실제로 AI 작업이 돌고 있는 상태만 센다. 시작하지 않은 draft 는 새 작업을 막지 않는다. */
+const ACTIVE_STATUSES = ["queued", "planning", "generating"] as const;
 
 /** 진행 중 작업 수와 최근 24시간 생성 수를 검사한다 (POST /api/jobs) */
 export async function assertJobLimits(db: SupabaseClient, userId: string): Promise<void> {
