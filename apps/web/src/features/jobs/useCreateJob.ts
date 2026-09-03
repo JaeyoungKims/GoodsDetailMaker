@@ -55,6 +55,8 @@ function messageFor(code: string, hasJob: boolean): string {
       return "상품 이미지는 전체 25MB 이하로 줄여 주세요.";
     case "STORAGE_QUOTA_LIMIT":
       return "저장 공간 한도에 도달했어요. 만료 정리가 끝난 뒤 다시 시도해 주세요.";
+    case "INVALID_IMAGE":
+      return "사진의 실제 형식이 JPG·PNG·WebP가 아니에요. 다른 형식으로 저장한 뒤 다시 올려 주세요.";
     case "IMAGE_NORMALIZATION_FAILED":
       return "이 사진을 안전한 이미지 형식으로 바꾸지 못했어요. 다른 JPG·PNG·WebP 파일로 다시 시도해 주세요.";
     case "JOB_ACTIVE_LIMIT":

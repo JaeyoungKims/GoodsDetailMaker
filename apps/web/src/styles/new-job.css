@@ -673,3 +673,12 @@
     flex-wrap: wrap;
   }
 }
+.upload-rejected {
+  margin: -12px 22px 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--danger-soft);
+  color: #7a2620;
+  font-size: 12px;
+  line-height: 1.5;
+}

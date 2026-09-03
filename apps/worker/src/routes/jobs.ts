@@ -5,6 +5,7 @@ import {
   INPUT_IMAGE_MAX_BYTES,
   INPUT_IMAGE_TOTAL_MAX_BYTES,
   INPUT_IMAGE_TYPES,
+  sniffImageType,
   RAW_RESERVE_BYTES_PER_SECTION,
   SECTION_COUNT,
   SECTION_MANUAL_RETRY_MAX,
@@ -117,10 +118,17 @@ export const jobRoutes = new Hono<HonoEnv>()
     // 같은 inputId 재업로드는 이전 크기를 빼고 계산한다
     await assertStorageQuota(db, job.user_id, size - Number(existing?.byte_size ?? 0));
 
+    // 본문을 읽어 실제 형식과 길이를 확인한다. 이미지 모델이 나중에 거부하는 것보다 여기서 막는 게 낫다.
+    const bytes = new Uint8Array(await c.req.raw.arrayBuffer());
+    if (bytes.byteLength !== size) throw new ApiError("INVALID_IMAGE", 400);
+    const sniffed = sniffImageType(bytes);
+    if (sniffed !== mime) {
+      throw new ApiError("INVALID_IMAGE", 400, {
+        detail: `declared ${mime} but content is ${sniffed}`,
+      });
+    }
     const key = r2Keys.input(job.user_id, job.id, inputId.data, mime);
-    const body = c.req.raw.body;
-    if (!body) throw new ApiError("INVALID_IMAGE", 400);
-    await putObject(c.env, key, body, mime);
+    await putObject(c.env, key, bytes.buffer, mime);
 
     const { error } = await db.from("job_inputs").upsert(
       {
