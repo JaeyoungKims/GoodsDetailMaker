@@ -124,8 +124,17 @@ export function useCreateJob({
         for (let i = 0; i < snap.files.length; i += 1) {
           if (uploaded.current.has(i)) continue;
           setMessage(`이미지 업로드 중 (${i + 1}/${snap.files.length})…`);
-          const normalized = await normalizeImage(snap.files[i]!);
-          await jobsApi.upload(accessToken, jobId, snap.inputIds[i]!, normalized);
+          const original = snap.files[i]!;
+          // 변환(회전 보정·축소)은 선택 단계다. 실패하면 원본을 그대로 올린다.
+          const upload = await normalizeImage(original).catch((err: unknown) => {
+            console.warn(
+              "[useCreateJob] normalize skipped, uploading original",
+              original.name,
+              err,
+            );
+            return original;
+          });
+          await jobsApi.upload(accessToken, jobId, snap.inputIds[i]!, upload);
           uploaded.current.add(i);
         }
         setMessage("생성 대기열에 넣는 중…");

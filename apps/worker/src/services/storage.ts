@@ -1,9 +1,15 @@
 import type { AppEnv } from "../env.js";
 
+const EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 /** R2 키 규칙. 사용자·작업 단위로 접두사를 두어 만료 정리와 용량 집계를 단순하게 한다. */
 export const r2Keys = {
-  input: (userId: string, jobId: string, inputId: string) =>
-    `users/${userId}/jobs/${jobId}/inputs/${inputId}.jpg`,
+  input: (userId: string, jobId: string, inputId: string, contentType = "image/jpeg") =>
+    `users/${userId}/jobs/${jobId}/inputs/${inputId}.${EXT[contentType] ?? "bin"}`,
   raw: (userId: string, jobId: string, sectionIndex: number) =>
     `users/${userId}/jobs/${jobId}/raw/${String(sectionIndex).padStart(2, "0")}.json`,
   jobPrefix: (userId: string, jobId: string) => `users/${userId}/jobs/${jobId}/`,

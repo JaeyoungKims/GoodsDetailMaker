@@ -4,6 +4,7 @@ import {
   INPUT_IMAGE_MAX,
   INPUT_IMAGE_MAX_BYTES,
   INPUT_IMAGE_TOTAL_MAX_BYTES,
+  INPUT_IMAGE_TYPES,
   RAW_RESERVE_BYTES_PER_SECTION,
   SECTION_COUNT,
   SECTION_MANUAL_RETRY_MAX,
@@ -73,7 +74,12 @@ export const jobRoutes = new Hono<HonoEnv>()
 
     const size = Number(c.req.header("x-file-size") ?? "0");
     const contentType = c.req.header("Content-Type") ?? "";
-    if (contentType !== "image/jpeg" || !Number.isInteger(size) || size < 1) {
+    const mime = contentType.split(";")[0]!.trim().toLowerCase();
+    if (
+      !(INPUT_IMAGE_TYPES as readonly string[]).includes(mime) ||
+      !Number.isInteger(size) ||
+      size < 1
+    ) {
       throw new ApiError("INVALID_IMAGE", 400);
     }
     if (size > INPUT_IMAGE_MAX_BYTES) throw new ApiError("JOB_INPUT_BYTES_LIMIT", 413);
@@ -93,10 +99,10 @@ export const jobRoutes = new Hono<HonoEnv>()
     // 같은 inputId 재업로드는 이전 크기를 빼고 계산한다
     await assertStorageQuota(db, job.user_id, size - Number(existing?.byte_size ?? 0));
 
-    const key = r2Keys.input(job.user_id, job.id, inputId.data);
+    const key = r2Keys.input(job.user_id, job.id, inputId.data, mime);
     const body = c.req.raw.body;
     if (!body) throw new ApiError("INVALID_IMAGE", 400);
-    await putObject(c.env, key, body, "image/jpeg");
+    await putObject(c.env, key, body, mime);
 
     const { error } = await db.from("job_inputs").upsert(
       {
@@ -105,7 +111,7 @@ export const jobRoutes = new Hono<HonoEnv>()
         user_id: job.user_id,
         position: others.length,
         r2_key: key,
-        content_type: "image/jpeg",
+        content_type: mime,
         byte_size: size,
         status: "stored",
         upload_attempts: attempts + 1,

@@ -219,7 +219,9 @@ export async function generateSectionImage(apiKey: string, input: ImageInput): P
   form.set("output_format", "jpeg");
   form.set("n", "1");
   input.images.forEach((img, i) => {
-    form.append("image[]", new Blob([img.bytes], { type: img.contentType }), `input-${i}.jpg`);
+    const ext =
+      img.contentType === "image/png" ? "png" : img.contentType === "image/webp" ? "webp" : "jpg";
+    form.append("image[]", new Blob([img.bytes], { type: img.contentType }), `input-${i}.${ext}`);
   });
 
   const response = await fetch(`${OPENAI_BASE}/images/edits`, {
