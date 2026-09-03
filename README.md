@@ -3,6 +3,7 @@
 상품 이미지와 정보를 한 번 입력하면 AI가 구매 퍼널 13단계를 기획하고, 각 단계를 1024×1536 이미지로
 독립 생성하는 BYOK(사용자 본인 OpenAI 키) 도구입니다.
 
+- 현황·백로그: [docs/status.md](docs/status.md)
 - 셋업 가이드(Supabase·Cloudflare·OpenAI): [docs/setup.md](docs/setup.md)
 - 아키텍처: [docs/architecture.md](docs/architecture.md)
 - 참고 사이트 역분석: [docs/reference/detail-page-studio-analysis.md](docs/reference/detail-page-studio-analysis.md)

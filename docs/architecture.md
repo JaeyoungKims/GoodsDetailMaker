@@ -1,6 +1,6 @@
 # 아키텍처
 
-참고 사이트 역분석: [detail-page-studio-analysis.md](./reference/detail-page-studio-analysis.md)
+참고 사이트 역분석: [detail-page-studio-analysis.md](./reference/detail-page-studio-analysis.md) · 현황·백로그: [status.md](./status.md)
 
 ## 구성
 
