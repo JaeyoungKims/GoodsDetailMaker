@@ -38,13 +38,6 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
     .eq("job_id", msg.jobId)
     .eq("section_index", msg.sectionIndex)
     .maybeSingle<SectionRow>();
-  if (!section || section.status === "completed") return { kind: "done" };
-  // 재시도 라우트는 queued 로 되돌린 뒤 넣으므로, 여기서 보이는 failed 는 다른 경로(크론·다른 attempt)가 끝낸 것
-  if (section.status === "failed") {
-    await note(`skipped: section already failed (${section.error_code ?? "no code"})`);
-    return { kind: "done" };
-  }
-
   const setStatus = (status: string, extra: Record<string, unknown> = {}) =>
     db
       .from("job_sections")
@@ -62,6 +55,13 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
       })
       .eq("job_id", msg.jobId)
       .eq("section_index", msg.sectionIndex);
+
+  if (!section || section.status === "completed") return { kind: "done" };
+  // 재시도 라우트는 queued 로 되돌린 뒤 넣으므로, 여기서 보이는 failed 는 다른 경로(크론·다른 attempt)가 끝낸 것
+  if (section.status === "failed") {
+    await note(`skipped: section already failed (${section.error_code ?? "no code"})`);
+    return { kind: "done" };
+  }
 
   // ── 게이트: 감속 중이거나 슬롯이 없으면 미룬다 ──
   const [settings, rateLimitedUntil] = await Promise.all([
