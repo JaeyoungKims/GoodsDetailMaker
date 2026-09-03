@@ -19,13 +19,10 @@
 | 디자인        | 인디고·쿨그레이 계열, 참고 사이트와 다른 레이아웃                                  | 캡처 확인                      |
 | 문서          | setup.md, architecture.md, CLAUDE.md                                               | -                              |
 
-## 2. 지금 막힌 곳
+## 2. 검증 이력
 
-첫 실제 작업에서 이미지 13장이 모두 `IMAGE_REQUEST_REJECTED` — OpenAI 응답:
-`invalid_image_file | Invalid input image file`. 참조 사진 파일 자체를 모델이 읽지 못함.
-같은 파일에서 브라우저 변환도 실패했으므로 파일 내용이 확장자와 다르거나(HEIC 등) 손상됐을 가능성이 큼.
-→ 업로드 시 파일 시그니처 검사(브라우저·서버)를 넣었다(`9c13e38`). **새 작업으로 재검증 필요.**
-검증 순서: DB 초기화 → 새 작업(정상 JPEG 1~2장) → 카드 완료 → 미리보기 → ZIP.
+- 2026-09-03: 정상 JPEG 로 새 작업 → 기획 → 이미지 13장 → 미리보기 → 세로 합본 다운로드까지 실제 환경에서 성공.
+- 이전 실패(`invalid_image_file`)는 참조 사진 파일 문제였음. 업로드 시 시그니처 검사로 재발 방지(`9c13e38`).
 
 ## 3. 알려진 이슈·주의
 
@@ -63,7 +60,17 @@
 - Supabase/R2: 우리가 재는 값(작업 수, 저장 용량, 행 수)을 운영자 화면에. 청구액은 관리 토큰 등록 시에만.
 - 진행 화면 하단에 "이 작업의 사용량" 카드, 설정에 "내 누적 사용량".
 
-### B4. 운영 준비
+### B4. 스타일 사후 변경 (재생성)
+
+완성된 작업에서 스타일(tone)을 바꿔 다시 만든다. 카피는 유지하고 장면·이미지 프롬프트만 재기획.
+
+- API: `PATCH /api/jobs/:id/style { tone }` → jobs.brief.tone 갱신, `{kind:"plan", mode:"restyle"}` enqueue.
+- 프롬프트: restyle 모드는 기존 headline/subheadline/bullets 를 입력으로 주고 visualDirection·imagePrompt 만 새로 받는다.
+- 컨슈머: 섹션 행의 visual_direction/image_prompt 만 갱신하고 status=queued, copy_version 유지 → image ×N.
+- 웹: 진행 화면 상단에 스타일 칩 + "이 스타일로 다시 만들기"(비용 확인 confirm). 섹션 단위 변경은 후순위.
+- 비용: 이미지 N장 + 기획 1회.
+
+### B5. 운영 준비
 
 실제 Turnstile, SMTP, 폰트 파일, 운영 문의 채널, `pnpm deploy`, 배포 후 URL 등록.
 
