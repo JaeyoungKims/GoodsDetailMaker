@@ -628,3 +628,86 @@
   font-size: 11px;
   word-break: break-all;
 }
+.section-feedback {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.section-feedback label {
+  display: grid;
+  gap: 5px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.section-feedback textarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 400;
+}
+.section-feedback textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+  outline: 0;
+}
+.section-feedback__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.section-feedback__row small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.section-feedback__row button {
+  min-height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.section-feedback__row button:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+.section-feedback > [role="status"] {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--info-soft);
+  color: var(--info-text);
+  font-size: 12px;
+}
+.section-feedback__history summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.section-feedback__history ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+.section-feedback__history li {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.section-feedback__history li span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}

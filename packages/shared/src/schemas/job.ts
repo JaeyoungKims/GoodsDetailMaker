@@ -57,6 +57,10 @@ export const sectionRetrySchema = z.object({
   sectionIndex: sectionIndexSchema,
   imageGenerationEnabled: z.boolean(),
 });
+export const sectionFeedbackUpdatedSchema = z.object({
+  updated: z.literal(true),
+  section: sectionSchema,
+});
 export const sectionCopyUpdatedSchema = z.object({
   updated: z.literal(true),
   section: sectionSchema,

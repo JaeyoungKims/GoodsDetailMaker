@@ -35,6 +35,8 @@ export interface SectionRow {
   status: string;
   error_code: string | null;
   error_detail?: string | null;
+  feedback?: string | null;
+  feedback_history?: Array<{ note: string; appliedAt: string }> | null;
   copy_version: number;
   attempt: number;
   manual_retries: number;
@@ -55,6 +57,8 @@ export function toSection(row: SectionRow): Section {
     status: row.status as Section["status"],
     errorCode: row.error_code as Section["errorCode"],
     errorDetail: row.error_detail ?? null,
+    feedback: row.feedback ?? null,
+    feedbackHistory: row.feedback_history ?? [],
     copyVersion: row.copy_version,
   };
 }

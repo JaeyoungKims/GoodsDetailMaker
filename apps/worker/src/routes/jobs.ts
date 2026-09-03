@@ -12,6 +12,7 @@ import {
   UPLOAD_ATTEMPT_MAX,
   productBriefSchema,
   sectionCopyUpdateSchema,
+  sectionFeedbackSchema,
 } from "@gdm/shared";
 import { imageGenerationEnabled, type HonoEnv } from "../env.js";
 import { ApiError } from "../lib/errors.js";
@@ -265,6 +266,26 @@ export const jobRoutes = new Hono<HonoEnv>()
       .maybeSingle<{ copy_version: number }>();
     if (!current) throw new ApiError("SECTION_NOT_FOUND", 404);
     throw new ApiError("COPY_VERSION_CONFLICT", 409, { currentCopyVersion: current.copy_version });
+  })
+
+  /** 장별 고칠 점 메모 저장. 다음 재생성 때 컨슈머가 프롬프트에 반영하고 이력으로 옮긴다. */
+  .patch("/:jobId/sections/:sectionIndex/feedback", async (c) => {
+    const { db, job } = await requireJob(c);
+    const index = sectionIndexParam.safeParse(c.req.param("sectionIndex"));
+    if (!index.success) throw new ApiError("SECTION_NOT_FOUND", 404);
+    const body = sectionFeedbackSchema.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) throw new ApiError("INVALID_SECTION_COPY", 400);
+
+    const { data: updated, error } = await db
+      .from("job_sections")
+      .update({ feedback: body.data.feedback || null })
+      .eq("job_id", job.id)
+      .eq("section_index", index.data)
+      .select("*")
+      .maybeSingle<SectionRow>();
+    if (error) throw new ApiError("INTERNAL_ERROR", 500);
+    if (!updated) throw new ApiError("SECTION_NOT_FOUND", 404);
+    return c.json({ updated: true as const, section: toSection(updated) });
   })
 
   /** OpenAI 원본 응답 JSON 프록시. 클라이언트가 디코드·합성한다. */

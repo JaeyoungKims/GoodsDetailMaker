@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
+  FEEDBACK_MAX,
   SECTION_ROLE_LABELS,
   sectionCopySchema,
   sectionErrorMessage,
@@ -31,6 +32,7 @@ interface Props {
   onPreviewReady: (index: number, copyVersion: number, blob: Blob) => void;
   onRetry: (index: number) => Promise<boolean>;
   onCopySave: (index: number, copy: SectionCopyUpdate) => Promise<Section>;
+  onFeedbackSave: (index: number, feedback: string) => Promise<Section>;
   onCopyApplied: (section: Section) => void;
   onConflict: () => void;
 }
@@ -56,6 +58,7 @@ export function SectionCard({
   onPreviewReady,
   onRetry,
   onCopySave,
+  onFeedbackSave,
   onCopyApplied,
   onConflict,
 }: Props) {
@@ -71,6 +74,16 @@ export function SectionCard({
   const [message, setMessage] = useState("");
   const [downloadMessage, setDownloadMessage] = useState("");
   const savedVersion = useRef(section.copyVersion);
+  const [feedback, setFeedback] = useState(section.feedback ?? "");
+  const [feedbackDirty, setFeedbackDirty] = useState(false);
+  const [savingFeedback, setSavingFeedback] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+
+  // 서버에서 메모가 비워지면(재생성에 반영됨) 입력도 비운다. 편집 중이면 유지.
+  useEffect(() => {
+    if (!feedbackDirty) setFeedback(section.feedback ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section.feedback, section.feedbackHistory?.length]);
 
   // 서버 카피가 바뀌면 초안을 맞춘다. 내가 편집 중이면 덮어쓰지 않고 알린다.
   useEffect(() => {
@@ -172,13 +185,43 @@ export function SectionCard({
     }
   }
 
+  async function saveFeedback(
+    successMessage = "고칠 점을 저장했어요. 다음에 다시 만들 때 반영됩니다.",
+  ): Promise<boolean> {
+    if (savingFeedback) return false;
+    const trimmed = feedback.trim();
+    if (trimmed.length > FEEDBACK_MAX) {
+      setFeedbackMessage(`고칠 점은 ${FEEDBACK_MAX}자까지 적을 수 있어요.`);
+      return false;
+    }
+    setSavingFeedback(true);
+    setFeedbackMessage("");
+    try {
+      const updated = await onFeedbackSave(section.index, trimmed);
+      setFeedbackDirty(false);
+      onCopyApplied(updated);
+      if (successMessage) setFeedbackMessage(successMessage);
+      return true;
+    } catch {
+      setFeedbackMessage("고칠 점을 저장하지 못했어요. 다시 시도해 주세요.");
+      return false;
+    } finally {
+      setSavingFeedback(false);
+    }
+  }
+
   async function regenerate() {
+    const hasNote = feedback.trim().length > 0;
     const ok = window.confirm(
-      "수정한 문구를 반영해 이 이미지만 다시 만들까요?\nOpenAI 이미지 API 사용료가 한 번 더 발생합니다.",
+      `${hasNote ? "적어 둔 고칠 점과 " : ""}수정한 문구를 반영해 이 이미지만 다시 만들까요?\nOpenAI 이미지 API 사용료가 한 번 더 발생합니다.`,
     );
-    if (!ok || retrying || saving) return;
+    if (!ok || retrying || saving || savingFeedback) return;
     if (dirty) {
       const saved = await saveCopy("");
+      if (!saved) return;
+    }
+    if (feedbackDirty) {
+      const saved = await saveFeedback("");
       if (!saved) return;
     }
     setRetrying(true);
@@ -330,11 +373,56 @@ export function SectionCard({
             )}
           </form>
           {message && <p role="status">{message}</p>}
+          {(section.status === "completed" || section.status === "failed") && (
+            <div className="section-feedback">
+              <label>
+                이 이미지에서 고칠 점
+                <textarea
+                  name="feedback"
+                  maxLength={FEEDBACK_MAX}
+                  placeholder={
+                    "예: 손잡이가 두 개로 그려졌어요. 하나여야 해요.\n배경을 더 밝게, 제품을 더 크게"
+                  }
+                  value={feedback}
+                  onChange={(e) => {
+                    setFeedbackDirty(true);
+                    setFeedback(e.target.value);
+                  }}
+                />
+              </label>
+              <div className="section-feedback__row">
+                <small>
+                  {feedback.trim().length}/{FEEDBACK_MAX}자 · 다시 만들 때 장면 설명에 반영돼요
+                </small>
+                <button
+                  type="button"
+                  disabled={savingFeedback || !feedbackDirty}
+                  onClick={() => void saveFeedback()}
+                >
+                  {savingFeedback ? "저장 중…" : "고칠 점 저장"}
+                </button>
+              </div>
+              {feedbackMessage && <p role="status">{feedbackMessage}</p>}
+              {section.feedbackHistory && section.feedbackHistory.length > 0 && (
+                <details className="section-feedback__history">
+                  <summary>반영된 수정 요청 {section.feedbackHistory.length}건</summary>
+                  <ol>
+                    {section.feedbackHistory.map((h, i) => (
+                      <li key={`${h.appliedAt}-${i}`}>
+                        <span>{new Date(h.appliedAt).toLocaleString("ko-KR")}</span>
+                        {h.note}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
+            </div>
+          )}
           {section.status === "completed" && (
             <div className="section-regenerate">
               <div>
-                <strong>문구를 고치거나 다른 결과가 필요하신가요?</strong>
-                <p>위 문구와 현재 기획을 반영해 이 한 장만 새 이미지로 다시 만듭니다.</p>
+                <strong>문구를 고치거나 이미지가 잘못됐나요?</strong>
+                <p>위 문구와 고칠 점 메모를 반영해 이 한 장만 새 이미지로 다시 만듭니다.</p>
               </div>
               <button type="button" disabled={retrying || saving} onClick={() => void regenerate()}>
                 {retrying ? "다시 만드는 중…" : "수정 문구로 이 이미지 다시 만들기"}

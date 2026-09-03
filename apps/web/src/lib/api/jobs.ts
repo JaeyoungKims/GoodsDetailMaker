@@ -5,6 +5,8 @@ import {
   jobStartedSchema,
   sectionCopyUpdateSchema,
   sectionCopyUpdatedSchema,
+  sectionFeedbackSchema,
+  sectionFeedbackUpdatedSchema,
   sectionRetrySchema,
   type Job,
   type ProductBriefInput,
@@ -72,6 +74,18 @@ export const jobsApi = {
       throw new ApiRequestError("JOB_RESPONSE_INVALID");
     }
     return updated;
+  },
+
+  /** 장별 고칠 점 메모 저장. 다음 재생성 때 반영된다. */
+  async updateFeedback(token: string, jobId: string, sectionIndex: number, feedback: string) {
+    const valid = sectionFeedbackSchema.safeParse({ feedback });
+    if (!valid.success) throw new ApiRequestError("INVALID_SECTION_COPY");
+    const body = await apiFetch(token, `/api/jobs/${jobId}/sections/${sectionIndex}/feedback`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(valid.data),
+    });
+    return parseOr(sectionFeedbackUpdatedSchema.safeParse(body));
   },
 
   /** OpenAI 원본 응답 JSON 문자열. 디코드·합성은 features/compose 에서. */

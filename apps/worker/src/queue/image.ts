@@ -8,7 +8,7 @@ import {
 import { getSettings } from "../services/settings.js";
 import type { AppEnv } from "../env.js";
 import { createServiceClient } from "../services/supabase.js";
-import { OpenAiError, generateSectionImage } from "../services/openai.js";
+import { OpenAiError, generateSectionImage, refineImagePrompt } from "../services/openai.js";
 import { readOpenAiKey } from "../services/settings.js";
 import { putObject, r2Keys } from "../services/storage.js";
 import { findJob, recomputeJobStatus, type SectionRow } from "../services/jobs.js";
@@ -105,10 +105,41 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
       return await fail("API_KEY_REQUIRED");
     }
 
+    // 사용자가 남긴 고칠 점이 있으면 프롬프트에 반영하고 이력으로 옮긴다
+    let prompt = section.image_prompt;
+    const feedback = section.feedback?.trim();
+    if (feedback) {
+      await note("applying feedback to prompt…");
+      try {
+        prompt = await refineImagePrompt(apiKey, {
+          imagePrompt: section.image_prompt,
+          visualDirection: section.visual_direction,
+          headline: section.headline,
+          feedback,
+          ...(env.PLAN_MODEL ? { model: env.PLAN_MODEL } : {}),
+        });
+      } catch (err) {
+        console.warn(
+          "[image] refine failed, appending feedback verbatim",
+          err instanceof Error ? err.message : err,
+        );
+        prompt = `${section.image_prompt}\n\nRevision notes from the seller (Korean, must be applied): ${feedback}`;
+      }
+      const history = [
+        ...(section.feedback_history ?? []),
+        { note: feedback, appliedAt: new Date().toISOString() },
+      ];
+      await db
+        .from("job_sections")
+        .update({ image_prompt: prompt, feedback: null, feedback_history: history })
+        .eq("job_id", msg.jobId)
+        .eq("section_index", msg.sectionIndex);
+    }
+
     await note("calling OpenAI images/edits…");
     const images = await loadInputImages(env, db, msg.jobId);
     const raw = await generateSectionImage(apiKey, {
-      prompt: section.image_prompt,
+      prompt,
       images,
       ...(env.IMAGE_MODEL ? { model: env.IMAGE_MODEL } : {}),
     });

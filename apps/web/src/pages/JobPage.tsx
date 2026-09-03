@@ -89,6 +89,12 @@ function JobView({ jobId }: { jobId: string }) {
     [jobId, token],
   );
 
+  const onFeedbackSave = useCallback(
+    async (index: number, feedback: string): Promise<Section> =>
+      (await jobsApi.updateFeedback(token, jobId, index, feedback)).section,
+    [jobId, token],
+  );
+
   async function exportAll(kind: ExportKind) {
     if (!job || exporting) return;
     const blobs = cache.current.orderedCurrent(jobId, job.sections);
@@ -222,6 +228,7 @@ function JobView({ jobId }: { jobId: string }) {
                 onPreviewReady={onPreviewReady}
                 onRetry={onRetry}
                 onCopySave={onCopySave}
+                onFeedbackSave={onFeedbackSave}
                 onCopyApplied={replaceSection}
                 onConflict={() => void refresh()}
               />

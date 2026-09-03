@@ -102,6 +102,19 @@ export const sectionCopySchema = z.object({
 export type SectionCopy = z.infer<typeof sectionCopySchema>;
 
 /** PATCH /api/jobs/:id/sections/:n/copy 요청 본문 (낙관적 잠금) */
+/** 장별 "고칠 점" 메모. 다음 재생성 때 이미지 프롬프트에 반영된다. */
+export const FEEDBACK_MAX = 500;
+export const sectionFeedbackSchema = z.object({
+  feedback: z.string().trim().max(FEEDBACK_MAX),
+});
+export type SectionFeedback = z.infer<typeof sectionFeedbackSchema>;
+
+export const feedbackHistoryEntrySchema = z.object({
+  note: z.string(),
+  appliedAt: z.string(),
+});
+export type FeedbackHistoryEntry = z.infer<typeof feedbackHistoryEntrySchema>;
+
 export const sectionCopyUpdateSchema = sectionCopySchema.extend({
   expectedCopyVersion: z.number().int().min(1).max(2147483647),
 });
@@ -113,6 +126,10 @@ export const sectionSchema = sectionPlanSchema.extend({
   errorCode: z.enum(SECTION_ERROR_CODES).nullable(),
   /** 실패 사유 원문 (OpenAI 오류 메시지 등). 운영자·사용자가 원인을 볼 수 있게 한다. */
   errorDetail: z.string().max(500).nullable().optional(),
+  /** 아직 반영되지 않은 고칠 점 메모 */
+  feedback: z.string().nullable().optional(),
+  /** 재생성에 반영된 메모 이력 (오래된 것부터) */
+  feedbackHistory: z.array(feedbackHistoryEntrySchema).optional(),
   copyVersion: z.number().int().min(1),
 });
 export type Section = z.infer<typeof sectionSchema>;

@@ -218,6 +218,51 @@ function normalizePlan(raw: unknown): unknown {
   return { sections };
 }
 
+export interface RefineInput {
+  imagePrompt: string;
+  visualDirection: string;
+  headline: string;
+  feedback: string;
+  model?: string;
+  fetchImpl?: typeof fetch;
+}
+
+/**
+ * 사용자의 "고칠 점" 메모를 반영해 이미지 프롬프트를 다시 쓴다.
+ * 실패하면 호출 측이 메모를 그대로 덧붙여 진행하므로 여기서는 예외를 그대로 던진다.
+ */
+export async function refineImagePrompt(apiKey: string, input: RefineInput): Promise<string> {
+  const fetchImpl = input.fetchImpl ?? fetch;
+  const response = await fetchImpl(`${OPENAI_BASE}/responses`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: input.model ?? PLAN_MODEL,
+      input: [
+        {
+          role: "system",
+          content: `You rewrite image-generation prompts for a Korean e-commerce detail page.
+Rules: keep the scene purpose and the shared design system; apply every point in the user's revision note; keep it 60-140 English words; portrait 2:3; the product must match the reference photos; never add text, letters, logos or watermarks; keep the copy zone (top/center/bottom) uncluttered as in the original. Output only the new prompt.`,
+        },
+        {
+          role: "user",
+          content: `Design system: ${input.visualDirection}
+Headline shown on this image (Korean): ${input.headline}
+Current prompt: ${input.imagePrompt}
+User revision note (Korean): ${input.feedback}`,
+        },
+      ],
+    }),
+  }).catch(() => {
+    throw new OpenAiError("IMAGE_NETWORK_FAILED");
+  });
+  if (!response.ok) throw await classifyResponse(response, "responses(refine)");
+  const body = (await response.json()) as { output_text?: string; output?: unknown };
+  const text = (body.output_text ?? extractOutputText(body.output)).trim();
+  if (text.length < 20) throw new OpenAiError("IMAGE_RESPONSE_INVALID", "refined prompt too short");
+  return text.slice(0, 4000);
+}
+
 export interface ImageInput {
   prompt: string;
   /** env.IMAGE_MODEL 로 덮어쓸 수 있다 (기본 gpt-image-2) */
