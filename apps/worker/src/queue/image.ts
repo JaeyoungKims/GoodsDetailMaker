@@ -40,7 +40,10 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
     .maybeSingle<SectionRow>();
   if (!section || section.status === "completed") return { kind: "done" };
   // 재시도 라우트는 queued 로 되돌린 뒤 넣으므로, 여기서 보이는 failed 는 다른 경로(크론·다른 attempt)가 끝낸 것
-  if (section.status === "failed") return { kind: "done" };
+  if (section.status === "failed") {
+    await note(`skipped: section already failed (${section.error_code ?? "no code"})`);
+    return { kind: "done" };
+  }
 
   const setStatus = (status: string, extra: Record<string, unknown> = {}) =>
     db
@@ -50,6 +53,15 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
       .eq("section_index", msg.sectionIndex);
 
   let lastDetail: string | null = null;
+  /** 어느 분기에서 끝났는지 카드에 보이도록 기록한다 (로그를 볼 수 없는 환경 대비) */
+  const note = (text: string) =>
+    db
+      .from("job_sections")
+      .update({
+        error_detail: `[attempt ${msg.attempt}, deferrals ${msg.deferrals}] ${text}`.slice(0, 500),
+      })
+      .eq("job_id", msg.jobId)
+      .eq("section_index", msg.sectionIndex);
 
   // ── 게이트: 감속 중이거나 슬롯이 없으면 미룬다 ──
   const [settings, rateLimitedUntil] = await Promise.all([
@@ -88,8 +100,12 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
 
   try {
     const apiKey = await readOpenAiKey(db, msg.userId);
-    if (!apiKey) return await fail("API_KEY_REQUIRED");
+    if (!apiKey) {
+      lastDetail = "vault returned no key for this user";
+      return await fail("API_KEY_REQUIRED");
+    }
 
+    await note("calling OpenAI images/edits…");
     const images = await loadInputImages(env, db, msg.jobId);
     const raw = await generateSectionImage(apiKey, {
       prompt: section.image_prompt,
@@ -102,6 +118,7 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
       raw_r2_key: key,
       raw_bytes: new TextEncoder().encode(raw).byteLength,
       error_code: null,
+      error_detail: null,
     });
     await recomputeJobStatus(db, msg.jobId);
     return { kind: "done" };

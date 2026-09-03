@@ -274,6 +274,9 @@ export function SectionCard({
               </button>
             </div>
           )}
+          {section.status !== "failed" && section.errorDetail && (
+            <p className="section-editor__diagnostic">{section.errorDetail}</p>
+          )}
           {reviewDraftNotice && (
             <aside className="section-draft-notice" role="note">
               <strong>가상 고객 이름과 후기 문구는 편집용 초안입니다.</strong>

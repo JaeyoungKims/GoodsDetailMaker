@@ -8,6 +8,7 @@ import { handlePlan } from "./plan.js";
  * 재시도는 새 메시지(attempt+1)를 넣고 원본은 ack 하여 attempt 를 우리가 통제한다.
  */
 export async function handleQueueBatch(batch: MessageBatch<unknown>, env: AppEnv): Promise<void> {
+  console.log(`[queue] batch received: ${batch.messages.length} message(s)`);
   for (const message of batch.messages) {
     const parsed = queueMessageSchema.safeParse(message.body);
     if (!parsed.success) {
@@ -21,6 +22,9 @@ export async function handleQueueBatch(batch: MessageBatch<unknown>, env: AppEnv
         await handlePlan(env, msg);
       } else {
         const outcome = await handleImage(env, msg);
+        console.log(
+          `[queue] image job=${msg.jobId} section=${msg.sectionIndex} attempt=${msg.attempt} deferrals=${msg.deferrals} -> ${outcome.kind}`,
+        );
         if (outcome.kind === "retry") {
           await env.JOB_QUEUE.send(
             { ...msg, attempt: outcome.nextAttempt, deferrals: 0 },

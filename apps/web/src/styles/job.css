@@ -620,3 +620,11 @@
   word-break: break-all;
   opacity: 0.85;
 }
+.section-editor__diagnostic {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  word-break: break-all;
+}
