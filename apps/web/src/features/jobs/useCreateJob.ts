@@ -90,19 +90,31 @@ export function useCreateJob({
     async (input: { brief: unknown; files: File[] }) => {
       if (busy.current || state.phase === "done") return;
 
-      if (!snapshot.current) {
-        const brief = productBriefSchema.safeParse(input.brief);
-        const files = input.files.filter((f) => f.size > 0);
-        if (!brief.success || !validateFiles(files)) {
-          setMessage(INPUT_RULE_MESSAGE, "idle");
-          return;
-        }
-        snapshot.current = { jobId: uuid(), brief: brief.data, files, inputIds: files.map(uuid) };
+      const brief = productBriefSchema.safeParse(input.brief);
+      const files = input.files.filter((f) => f.size > 0);
+      if (!brief.success || !validateFiles(files)) {
+        setMessage(INPUT_RULE_MESSAGE, "idle");
+        return;
+      }
+      // "이어서 시도" 중이라도 사진이나 내용을 바꿨으면 이전 작업을 버리고 새로 시작한다
+      const prev = snapshot.current;
+      const sameInput =
+        prev !== undefined &&
+        JSON.stringify(prev.brief) === JSON.stringify(brief.data) &&
+        prev.files.length === files.length &&
+        prev.files.every((f, i) => f === files[i]);
+      let snap: Snapshot;
+      if (prev && sameInput) {
+        snap = prev;
+      } else {
+        snap = { jobId: uuid(), brief: brief.data, files, inputIds: files.map(uuid) };
+        snapshot.current = snap;
+        createdJobId.current = null;
+        uploaded.current.clear();
       }
 
       busy.current = true;
       setState({ phase: "submitting", message: "" });
-      const snap = snapshot.current;
       try {
         if (!createdJobId.current) {
           setMessage("작업을 만드는 중…");
