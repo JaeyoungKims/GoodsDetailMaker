@@ -7,7 +7,6 @@ import {
   INPUT_IMAGE_MAX,
   JOB_ACTIVE_LIMIT,
   JOB_DAILY_LIMIT,
-  JOB_RETENTION_HOURS,
   SECTION_COUNT,
   SECTION_MANUAL_RETRY_MAX,
 } from "@gdm/shared";
@@ -118,33 +117,14 @@ const CONTENT: Record<InfoKind, InfoContent> = {
               추가됩니다.
             </p>
             <p>
-              서버(Cloudflare, Supabase)는 무료 한도 안에서 시작할 수 있습니다. 한도를 넘으면
-              서비스가 느려지거나 멈출 수 있으니 운영자는 아래 공식 요금 문서를 확인하세요.
+              서버는 운영자의 PC에서 직접 실행되므로 별도 서버 비용이 없습니다. 아래 OpenAI 문서에서
+              모델 요금과 사용 한도를 확인하세요.
             </p>
             <ul>
               <li>
                 {ext(
                   "https://developers.openai.com/api/docs/models/gpt-image-2",
                   "OpenAI GPT Image 2 모델·사용 한도",
-                )}
-              </li>
-              <li>
-                {ext(
-                  "https://developers.cloudflare.com/workers/platform/pricing/",
-                  "Cloudflare Workers 요금",
-                )}
-              </li>
-              <li>{ext("https://developers.cloudflare.com/r2/pricing/", "Cloudflare R2 요금")}</li>
-              <li>
-                {ext(
-                  "https://developers.cloudflare.com/queues/platform/pricing/",
-                  "Cloudflare Queues 요금",
-                )}
-              </li>
-              <li>
-                {ext(
-                  "https://supabase.com/docs/guides/platform/billing-on-supabase",
-                  "Supabase 요금·무료 한도",
                 )}
               </li>
             </ul>
@@ -239,10 +219,10 @@ const CONTENT: Record<InfoKind, InfoContent> = {
         title: "어떤 정보가 오가나요?",
         body: (
           <p>
-            이메일 로그인 정보, 입력한 상품 설명, 업로드한 제품 사진, 생성 결과와 작업 상태를
+            이메일과 비밀번호 해시, 입력한 상품 설명, 업로드한 제품 사진, 생성 결과와 작업 상태를
             처리합니다. OpenAI API 키는{" "}
-            <strong>Supabase Vault에 암호화해 저장하고 서버에서만 사용</strong>합니다. 브라우저나
-            공개 주소에 키를 넣지 않습니다.
+            <strong>서버에서 암호화해 저장하고 생성 요청에만 사용</strong>합니다. 브라우저나 공개
+            주소에 키를 넣지 않습니다.
           </p>
         ),
       },
@@ -250,10 +230,9 @@ const CONTENT: Record<InfoKind, InfoContent> = {
         title: "누가 처리하나요?",
         body: (
           <p>
-            <strong>Cloudflare</strong>는 사이트·작업 대기열·비공개 이미지 저장을,{" "}
-            <strong>Supabase</strong>는 로그인·데이터베이스·Vault를, <strong>OpenAI</strong>는
-            사용자가 요청한 기획과 이미지 생성을 처리합니다. 각 제공자의 약관과 개인정보 정책도 함께
-            적용됩니다.
+            이 서비스는 운영자의 서버에서 직접 실행되며 데이터베이스와 이미지 파일도 그 서버에
+            저장됩니다. 기획과 이미지 생성 요청만 <strong>OpenAI</strong>로 전달되며, OpenAI의
+            약관과 개인정보 정책이 함께 적용됩니다.
           </p>
         ),
       },
@@ -270,10 +249,9 @@ const CONTENT: Record<InfoKind, InfoContent> = {
         title: "보관과 삭제",
         body: (
           <p>
-            시작하지 않은 초안, 진행 중·완료된 작업, 업로드 사진과 생성 결과는 모두{" "}
-            <strong>{JOB_RETENTION_HOURS}시간 동안 보관</strong>합니다. 그 뒤 자동 삭제가 시작되며
-            보통 15분 안에 끝납니다. 삭제가 시작되면 진행 중인 작업도 중단됩니다. 결과물은 보관 기간
-            안에 내려받아 두세요.
+            보관 기간은 운영자가 정합니다. 기본값은 <strong>무제한 보관</strong>이며, 운영자가
+            기간을 설정하면 그 기간이 지난 작업·사진·결과가 자동 삭제됩니다. 시작하지 않은 초안은 새
+            작업을 만들 때 정리됩니다.
           </p>
         ),
       },

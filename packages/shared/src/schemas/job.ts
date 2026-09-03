@@ -46,6 +46,8 @@ export const jobSchema = z.object({
     orderedSections(SECTION_COUNT),
   ]),
   imageGenerationEnabled: z.boolean(),
+  /** 기획 단계 등 작업 전체가 실패했을 때의 코드 (섹션이 없을 수 있다) */
+  errorCode: z.string().nullable().optional(),
 });
 export type Job = z.infer<typeof jobSchema>;
 

@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@gdm/shared": "workspace:*",
-    "@supabase/supabase-js": "^2.114.0",
     "jszip": "^3.10.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

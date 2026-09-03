@@ -711,3 +711,17 @@
   color: var(--muted);
   font-size: 11px;
 }
+.planning-card--failed {
+  border-color: var(--danger);
+}
+.planning-card--failed strong {
+  color: var(--danger);
+}
+.planning-card--failed small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.planning-card--failed a {
+  margin-top: 8px;
+  text-decoration: none;
+}

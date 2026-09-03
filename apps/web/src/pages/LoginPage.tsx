@@ -1,60 +1,46 @@
-import { useCallback, useRef, useState, type FormEvent } from "react";
-import { TurnstileWidget } from "@/features/auth/TurnstileWidget";
-import { resolveSiteKey } from "@/features/auth/turnstile";
-import { supabase } from "@/lib/supabase";
+import { useState, type FormEvent } from "react";
+import { useAuth } from "@/features/auth/useAuth";
+import { ApiRequestError } from "@/lib/api/http";
 
-const SITE_KEY = resolveSiteKey(import.meta.env.VITE_TURNSTILE_SITE_KEY);
+type Mode = "login" | "signup";
 
-/** 이메일 매직링크 로그인 + Turnstile. 토큰은 1회용이라 제출할 때마다 위젯을 리셋한다. */
+function messageFor(err: unknown, mode: Mode): string {
+  const code = err instanceof ApiRequestError ? err.code : "";
+  switch (code) {
+    case "INVALID_CREDENTIALS":
+      return mode === "login"
+        ? "이메일 또는 비밀번호가 맞지 않습니다."
+        : "이메일 형식과 비밀번호(8자 이상)를 확인해 주세요.";
+    case "EMAIL_TAKEN":
+      return "이미 가입된 이메일입니다. 로그인해 주세요.";
+    case "SIGNUP_DISABLED":
+      return "지금은 새 계정을 만들 수 없습니다. 운영자에게 문의해 주세요.";
+    default:
+      return "처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+}
+
+/** 이메일+비밀번호 로그인·가입. 첫 계정이 관리자가 된다. 소셜 로그인은 추후 이 화면에 버튼으로 추가. */
 export function LoginPage() {
+  const { signIn, signUp } = useAuth();
+  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [resetSignal, setResetSignal] = useState(0);
-  const tokenRef = useRef<string | null>(null);
-  const busy = useRef(false);
-
-  const onTokenChange = useCallback((token: string | null) => {
-    tokenRef.current = token;
-    setCaptchaToken(token);
-  }, []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (busy.current) return;
-    const normalized = email.trim().toLowerCase();
+    if (busy) return;
+    setBusy(true);
     setMessage(null);
-    if (!normalized) {
-      setMessage("이메일 주소를 입력해 주세요.");
-      return;
-    }
-    const token = tokenRef.current;
-    if (!token) {
-      setMessage("먼저 보안 확인을 완료해 주세요.");
-      return;
-    }
-
-    busy.current = true;
-    setSending(true);
-    tokenRef.current = null;
-    setCaptchaToken(null);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: normalized,
-        options: { captchaToken: token, emailRedirectTo: window.location.origin },
-      });
-      setMessage(
-        error
-          ? "로그인 링크를 보내지 못했습니다. 보안 확인 후 다시 시도해 주세요."
-          : "로그인 링크를 이메일로 보냈습니다. 받은편지함을 확인해 주세요.",
-      );
-    } catch {
-      setMessage("로그인 링크를 보내지 못했습니다. 보안 확인 후 다시 시도해 주세요.");
+      if (mode === "login") await signIn(email.trim().toLowerCase(), password);
+      else await signUp(email.trim().toLowerCase(), password);
+    } catch (err) {
+      setMessage(messageFor(err, mode));
     } finally {
-      setResetSignal((n) => n + 1);
-      busy.current = false;
-      setSending(false);
+      setBusy(false);
     }
   }
 
@@ -98,8 +84,12 @@ export function LoginPage() {
       </section>
       <section className="login-panel">
         <form className="login-card" onSubmit={onSubmit}>
-          <h2>제작실에 로그인</h2>
-          <p>비밀번호 없이 이메일로 받은 안전한 링크를 눌러 로그인합니다.</p>
+          <h2>{mode === "login" ? "제작실에 로그인" : "계정 만들기"}</h2>
+          <p>
+            {mode === "login"
+              ? "이메일과 비밀번호로 로그인합니다."
+              : "이메일과 비밀번호(8자 이상)로 계정을 만듭니다. 첫 계정은 관리자가 됩니다."}
+          </p>
           <label htmlFor="email">이메일 주소</label>
           <input
             id="email"
@@ -107,32 +97,44 @@ export function LoginPage() {
             autoComplete="email"
             required
             value={email}
-            disabled={sending}
+            disabled={busy}
             placeholder="name@example.com"
             onChange={(e) => setEmail(e.target.value)}
           />
-          <TurnstileWidget
-            siteKey={SITE_KEY}
-            resetSignal={resetSignal}
-            onTokenChange={onTokenChange}
+          <label htmlFor="password">비밀번호</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            required
+            minLength={8}
+            value={password}
+            disabled={busy}
+            onChange={(e) => setPassword(e.target.value)}
           />
-          <button
-            type="submit"
-            disabled={sending || !captchaToken}
-            aria-describedby="turnstile-status"
-          >
-            {sending ? "보내는 중…" : "이메일 로그인 링크 받기"}
+          <button type="submit" disabled={busy}>
+            {busy ? "확인 중…" : mode === "login" ? "로그인" : "가입하고 시작하기"}
           </button>
           {message && (
             <p className="login-message" role="status" aria-live="polite">
               {message}
             </p>
           )}
+          <button
+            type="button"
+            className="login-switch"
+            onClick={() => {
+              setMode(mode === "login" ? "signup" : "login");
+              setMessage(null);
+            }}
+          >
+            {mode === "login" ? "계정이 없으신가요? 만들기" : "이미 계정이 있으신가요? 로그인"}
+          </button>
           <div className="login-security">
             <span aria-hidden="true">✓</span>
             <p>
-              <strong>비밀번호를 저장하지 않아요</strong>
-              <small>로그인 링크는 본인 이메일로만 전송됩니다.</small>
+              <strong>비밀번호는 해시로만 저장합니다</strong>
+              <small>내 서버에서만 처리되고 외부로 나가지 않습니다.</small>
             </p>
           </div>
         </form>

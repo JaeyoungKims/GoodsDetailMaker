@@ -1,0 +1,30 @@
+{
+  "name": "@gdm/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "자체 호스팅 서버: Node + Hono, Postgres, pg-boss 큐, 로컬 디스크 저장소, 쿠키 세션 로그인, SSE 진행 스트림",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.build.json",
+    "migrate": "tsx src/db/migrate.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@gdm/ai": "workspace:*",
+    "@gdm/shared": "workspace:*",
+    "@hono/node-server": "^2.1.1",
+    "hono": "^4.13.5",
+    "pg-boss": "^12.29.0",
+    "postgres": "^3.4.9",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

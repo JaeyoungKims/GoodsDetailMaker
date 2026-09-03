@@ -10,7 +10,12 @@ export default defineConfig({
   server: {
     port: 5173,
     // 로컬 개발: /api 는 wrangler dev(8787) 로 넘긴다
-    proxy: { "/api": { target: "http://127.0.0.1:8787", changeOrigin: true } },
+    proxy: {
+      "/api": {
+        target: process.env["VITE_API_TARGET"] ?? "http://127.0.0.1:8787",
+        changeOrigin: false,
+      },
+    },
   },
   build: {
     target: "es2022",

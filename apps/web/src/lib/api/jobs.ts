@@ -90,8 +90,9 @@ export const jobsApi = {
 
   /** OpenAI 원본 응답 JSON 문자열. 디코드·합성은 features/compose 에서. */
   async raw(token: string, jobId: string, sectionIndex: number, signal?: AbortSignal) {
+    void token;
     const response = await fetch(`/api/jobs/${jobId}/sections/${sectionIndex}/raw`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
       signal: signal ?? null,
     });
     if (!response.ok) {

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { deriveJobStatus, sectionRealtimeRowSchema, type Job, type Section } from "@gdm/shared";
 import { jobsApi } from "@/lib/api/jobs";
-import { supabase } from "@/lib/supabase";
 
 const TERMINAL = new Set<Job["status"]>(["completed", "failed", "partial"]);
 
@@ -16,7 +15,7 @@ interface Options {
 
 /**
  * 작업 진행 상태 구독.
- * - Supabase Realtime(job_sections, job_id 필터)으로 변화를 감지하면 GET /api/jobs/:id 를 다시 읽는다.
+ * - 서버 SSE(/api/jobs/:id/events)로 변화를 감지하면 GET /api/jobs/:id 를 다시 읽는다.
  * - 실시간이 실패하거나 작업이 진행 중이면 폴링으로 보완한다.
  * - 동시 갱신 요청은 하나로 합치고, 진행 중에 또 요청이 오면 끝난 뒤 한 번 더 읽는다.
  */
@@ -74,26 +73,19 @@ export function useJobProgress({
     setJob((prev) => (prev?.jobId === jobId ? prev : null));
     void refresh();
 
-    const channel = supabase
-      .channel(`job-${jobId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "job_sections", filter: `job_id=eq.${jobId}` },
-        (payload) => {
-          const row = sectionRealtimeRowSchema.safeParse(payload.new);
-          if (!row.success) return void refresh();
-          if (row.data.job_id === jobId && row.data.user_id === userId) void refresh();
-        },
-      )
-      .subscribe((status) => {
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED")
-          setRealtimeDown(true);
-        if (status === "SUBSCRIBED") setRealtimeDown(false);
-      });
+    // 서버 SSE: job_sections 가 바뀔 때마다 이벤트가 오고, 그때 전체 상태를 다시 읽는다
+    const source = new EventSource(`/api/jobs/${jobId}/events`, { withCredentials: true });
+    source.addEventListener("ready", () => setRealtimeDown(false));
+    source.addEventListener("section", (event) => {
+      const row = sectionRealtimeRowSchema.safeParse(JSON.parse((event as MessageEvent).data));
+      if (!row.success) return void refresh();
+      if (row.data.job_id === jobId && row.data.user_id === userId) void refresh();
+    });
+    source.onerror = () => setRealtimeDown(true);
 
     return () => {
       alive.current = false;
-      void supabase.removeChannel(channel);
+      source.close();
     };
   }, [jobId, userId, refresh]);
 

@@ -1,61 +1,39 @@
-# GoodsDetailMaker — 상세페이지 13장 제작실
+# GoodsDetailMaker — 상세페이지 13장 제작실 (자체 호스팅)
 
 상품 이미지와 정보를 한 번 입력하면 AI가 구매 퍼널 13단계를 기획하고, 각 단계를 1024×1536 이미지로
-독립 생성하는 BYOK(사용자 본인 OpenAI 키) 도구입니다.
+독립 생성하는 BYOK(사용자 본인 OpenAI 키) 도구입니다. **집 PC 한 대에서 전부 실행**됩니다.
 
+- 셋업 가이드: [docs/setup.md](docs/setup.md)
 - 현황·백로그: [docs/status.md](docs/status.md)
-- 셋업 가이드(Supabase·Cloudflare·OpenAI): [docs/setup.md](docs/setup.md)
 - 아키텍처: [docs/architecture.md](docs/architecture.md)
 - 참고 사이트 역분석: [docs/reference/detail-page-studio-analysis.md](docs/reference/detail-page-studio-analysis.md)
 
 ## 스택
 
-| 영역                      | 기술                                                           |
-| ------------------------- | -------------------------------------------------------------- |
-| 프론트                    | React 19, Vite 7, React Router 7, zod 4, supabase-js           |
-| API / 큐 / 저장           | Cloudflare Workers (Hono), Queues, R2, 정적 에셋               |
-| 인증 / DB / 실시간 / 비밀 | Supabase Auth(매직링크 + Turnstile), Postgres, Realtime, Vault |
-| AI                        | OpenAI gpt-image-2 (이미지), Responses API (기획)              |
+| 영역   | 기술                                                                                         |
+| ------ | -------------------------------------------------------------------------------------------- |
+| 프론트 | React 19, Vite 7, React Router 7, zod 4                                                      |
+| 서버   | Node 22, Hono, postgres.js, pg-boss(큐), 로컬 디스크 저장, 쿠키 세션 로그인, SSE 진행 스트림 |
+| DB     | PostgreSQL 16 (Windows 에 설치된 것 그대로)                                                  |
+| AI     | OpenAI gpt-image-2 (이미지), Responses API (기획·프롬프트 재작성)                            |
 
-## 시작하기
+## 빠른 시작
 
 ```bash
 pnpm install
-
-# 1) Supabase: supabase/migrations 적용, supabase/README.md 의 Auth 설정
-# 2) 웹 환경변수
-cp .env.example apps/web/.env.local        # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
-# 3) 워커 비밀
-cp apps/worker/.dev.vars.example apps/worker/.dev.vars
-#    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY 등 채우기 (wrangler.jsonc 는 수정하지 않음)
-
-pnpm dev          # web(5173) + worker(8787) 동시 실행. /api 는 vite 가 8787 로 프록시
-pnpm typecheck
-pnpm test
-pnpm build        # web 빌드 후 worker dry-run 번들
+cp apps/server/.env.example apps/server/.env   # DATABASE_URL, DATA_DIR, APP_SECRET 채우기
+pnpm dev            # 웹 5173 + 서버 8787 (개발)
+pnpm build && pnpm start   # 운영: http://localhost:8787
 ```
 
-## 배포 (회원님 Cloudflare 계정에서 직접)
-
-```bash
-cd apps/worker
-wrangler login                                   # 또는 CLOUDFLARE_API_TOKEN
-wrangler r2 bucket create goods-detail-maker-artifacts
-wrangler queues create goods-detail-maker-jobs
-wrangler queues create goods-detail-maker-jobs-dlq
-wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-wrangler secret put TURNSTILE_SECRET_KEY
-cd ../.. && pnpm deploy
-```
-
-정적 에셋(`apps/web/dist`)과 API 가 한 Worker 로 배포됩니다.
+첫 접속에서 계정을 만들면 관리자가 됩니다. 설정에서 OpenAI 키를 저장한 뒤 새 상세페이지를 시작하세요.
 
 ## 폴더
 
 ```
 apps/web         SPA
-apps/worker      Worker (API, 큐, cron)
-packages/shared  공용 스키마·상수
-supabase         마이그레이션
-docs             설계 문서
+apps/server      API + 큐 컨슈머 + 정적 서빙 (한 프로세스)
+packages/shared  도메인 상수·zod 스키마·에러 코드
+packages/ai      OpenAI 호출 계층 (기획 프롬프트, 이미지 생성, 프롬프트 재작성)
+docs             문서
 ```

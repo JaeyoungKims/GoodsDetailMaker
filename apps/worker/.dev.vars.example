@@ -1,6 +1,0 @@
-# 로컬 개발용. 여기 값이 wrangler.jsonc 의 vars 를 덮어쓰므로 wrangler.jsonc 는 수정하지 않는다.
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxx
-# HS256 레거시 프로젝트만 채운다. 비우면 /auth/v1/.well-known/jwks.json 으로 검증한다.
-SUPABASE_JWT_SECRET=
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA

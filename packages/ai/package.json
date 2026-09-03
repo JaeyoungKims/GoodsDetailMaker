@@ -1,0 +1,22 @@
+{
+  "name": "@gdm/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenAI 호출 계층: 기획 프롬프트, structured output + repair, 이미지 생성, 프롬프트 재작성. 플랫폼 독립",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gdm/shared": "workspace:*",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}

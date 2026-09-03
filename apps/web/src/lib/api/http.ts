@@ -21,7 +21,7 @@ export class CopyVersionConflictError extends Error {
 const knownCodes = new Set<string>(API_ERROR_CODES);
 
 /**
- * 인증 헤더를 붙여 /api 를 호출하고 JSON 을 돌려준다.
+ * /api 를 호출하고 JSON 을 돌려준다. 인증은 HttpOnly 쿠키 세션이다.
  * 서버 에러는 `{ error: CODE }` 를 ApiRequestError 로, 409 카피 충돌은 CopyVersionConflictError 로 바꾼다.
  */
 export async function apiFetch<T = unknown>(
@@ -31,10 +31,8 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(path, {
-      ...init,
-      headers: { Authorization: `Bearer ${accessToken}`, ...(init.headers ?? {}) },
-    });
+    response = await fetch(path, { credentials: "include", ...init });
+    void accessToken; // 쿠키 세션. 매개변수는 호출부 호환용으로 남긴다.
   } catch {
     throw new ApiRequestError(init.signal?.aborted ? "JOB_REQUEST_ABORTED" : "JOB_REQUEST_FAILED");
   }

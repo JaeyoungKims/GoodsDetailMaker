@@ -1,52 +1,51 @@
-import type { Session, User } from "@supabase/supabase-js";
-import { createContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { supabase } from "@/lib/supabase";
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { authApi, type AuthUser } from "@/lib/api/auth";
 
 export interface AuthState {
   initialized: boolean;
-  session: Session | null;
-  user: User | null;
+  user: AuthUser | null;
+  /** 쿠키 세션이라 토큰 문자열은 없다. 기존 API 호출부와의 호환을 위해 빈 문자열 대신 "cookie" 를 준다. */
   accessToken: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      setUser(await authApi.me());
+    } catch {
+      setUser(null);
+    } finally {
+      setInitialized(true);
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, next) => {
-      if (!active) return;
-      setSession(next);
-      setInitialized(true);
-    });
-    supabase.auth
-      .getSession()
-      .then(({ data }) => active && setSession(data.session))
-      .catch(() => active && setSession(null))
-      .finally(() => active && setInitialized(true));
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   const value = useMemo<AuthState>(
     () => ({
       initialized,
-      session,
-      user: session?.user ?? null,
-      accessToken: session?.access_token ?? null,
+      user,
+      accessToken: user ? "cookie" : null,
+      signIn: async (email, password) => setUser(await authApi.login(email, password)),
+      signUp: async (email, password) => setUser(await authApi.signup(email, password)),
       signOut: async () => {
-        await supabase.auth.signOut();
+        await authApi.logout().catch(() => {});
+        setUser(null);
       },
+      refresh,
     }),
-    [initialized, session],
+    [initialized, user, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

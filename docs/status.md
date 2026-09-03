@@ -2,6 +2,8 @@
 
 브랜치: `claude/product-detail-page-generator-jipts6` (main 미병합). 로컬 개발도 이 브랜치에서 한다.
 
+**2026-09-03 구조 전환**: Cloudflare Workers·Queues·R2·Supabase 를 걷어내고 집 PC 자체 호스팅(Node + Postgres + 디스크)으로 바꿨다. 이전 클라우드 버전은 git 이력(`4fc01cb` 이전)에 있다.
+
 ## 1. 완료된 것
 
 | 영역          | 내용                                                                               | 검증                           |
@@ -27,11 +29,11 @@
 ## 3. 알려진 이슈·주의
 
 - `pnpm dev` 에서 Worker console 출력이 안 보였던 원인은 옛 코드 실행이었다. 커밋 확인 습관 필요.
-- Turnstile 은 테스트 키. 운영 전 실제 위젯 + Supabase Captcha 켜기.
-- Supabase 기본 메일 한도가 낮다. 운영 전 자체 SMTP.
+- 소셜 로그인(구글·네이버·카카오)은 user_identities 테이블만 준비됨. OAuth 클라이언트 등록 후 구현.
+- 비밀번호 재설정(이메일) 없음. 관리자가 DB 에서 초기화하거나 추후 SMTP 연동.
 - 폰트 `apps/web/public/fonts/NotoSansKR-Variable.woff2` 미포함. 없으면 시스템 폰트로 합성.
 - 도움말의 운영 문의 채널 미기입.
-- 기획 모델명 `gpt-5-mini`, 이미지 모델 `gpt-image-2` 는 wrangler vars(`PLAN_MODEL`, `IMAGE_MODEL`)로 교체 가능.
+- 기획 모델명 `gpt-5-mini`, 이미지 모델 `gpt-image-2` 는 `.env` 의 `PLAN_MODEL`, `IMAGE_MODEL` 로 교체 가능.
 
 ## 4. 백로그 (우선순위 순)
 

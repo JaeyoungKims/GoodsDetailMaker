@@ -204,7 +204,22 @@ function JobView({ jobId }: { jobId: string }) {
         />
       )}
 
-      {job.sections.length === 0 ? (
+      {job.sections.length === 0 && job.status === "failed" ? (
+        <section className="planning-card planning-card--failed" role="alert">
+          <strong>기획 단계에서 멈췄어요</strong>
+          <p>
+            {job.errorCode === "OPENAI_API_KEY_INVALID"
+              ? "OpenAI API 키가 없거나 유효하지 않아요. 설정에서 키를 확인한 뒤 새 상세페이지를 시작해 주세요."
+              : job.errorCode === "OPENAI_RATE_LIMIT"
+                ? "OpenAI 요청 한도에 걸렸어요. 잠시 뒤 새 상세페이지를 시작해 주세요."
+                : "AI 기획 요청이 실패했어요. 잠시 뒤 새 상세페이지를 다시 시작해 주세요."}
+          </p>
+          {job.errorCode && <small>{job.errorCode}</small>}
+          <a className="btn-primary" href="/new">
+            새 상세페이지 만들기
+          </a>
+        </section>
+      ) : job.sections.length === 0 ? (
         <section className="planning-card" aria-live="polite">
           <span>1</span>
           <span>2</span>

@@ -697,3 +697,14 @@ p {
   font-weight: 600;
   text-underline-offset: 3px;
 }
+.login-switch {
+  justify-self: start;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--primary-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
