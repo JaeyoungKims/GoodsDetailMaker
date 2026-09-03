@@ -38,14 +38,32 @@ export class OpenAiError extends Error {
   }
 }
 
-function classifyStatus(status: number, retryAfter: string | null): OpenAiError {
-  if (status === 401) return new OpenAiError("OPENAI_API_KEY_INVALID");
+async function classifyResponse(response: Response, context: string): Promise<OpenAiError> {
+  const status = response.status;
+  const retryAfter = response.headers.get("retry-after");
+  const body = await response.text().catch(() => "");
+  const detail = extractErrorMessage(body) ?? body.slice(0, 300);
+  console.error(`[openai] ${context} failed: HTTP ${status} ${detail}`);
+  if (status === 401) return new OpenAiError("OPENAI_API_KEY_INVALID", detail);
   if (status === 429) {
     const seconds = retryAfter ? Number(retryAfter) : undefined;
-    return new OpenAiError("OPENAI_RATE_LIMIT", undefined, Number.isFinite(seconds) ? seconds : 30);
+    return new OpenAiError("OPENAI_RATE_LIMIT", detail, Number.isFinite(seconds) ? seconds : 30);
   }
-  if (status === 400 || status === 403) return new OpenAiError("IMAGE_REQUEST_REJECTED");
-  return new OpenAiError("OPENAI_PROVIDER_FAILED", `status ${status}`);
+  if (status === 400 || status === 403) return new OpenAiError("IMAGE_REQUEST_REJECTED", detail);
+  return new OpenAiError("OPENAI_PROVIDER_FAILED", `status ${status} ${detail}`);
+}
+
+function extractErrorMessage(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { message?: string; code?: string; type?: string };
+    };
+    const e = parsed.error;
+    if (!e) return null;
+    return [e.type, e.code, e.message].filter(Boolean).join(" | ");
+  } catch {
+    return null;
+  }
 }
 
 export interface PlanInput {
@@ -138,7 +156,7 @@ async function requestPlan(
   }).catch(() => {
     throw new OpenAiError("IMAGE_NETWORK_FAILED");
   });
-  if (!response.ok) throw classifyStatus(response.status, response.headers.get("retry-after"));
+  if (!response.ok) throw await classifyResponse(response, "responses(plan)");
   const body = (await response.json()) as { output_text?: string; output?: unknown };
   return body.output_text ?? extractOutputText(body.output);
 }
@@ -202,6 +220,8 @@ function normalizePlan(raw: unknown): unknown {
 
 export interface ImageInput {
   prompt: string;
+  /** env.IMAGE_MODEL 로 덮어쓸 수 있다 (기본 gpt-image-2) */
+  model?: string;
   /** 주력 제품 이미지들. edits API 에 참조로 넣는다. */
   images: Array<{ bytes: ArrayBuffer; contentType: string }>;
 }
@@ -212,7 +232,7 @@ export interface ImageInput {
  */
 export async function generateSectionImage(apiKey: string, input: ImageInput): Promise<string> {
   const form = new FormData();
-  form.set("model", IMAGE_MODEL);
+  form.set("model", input.model ?? IMAGE_MODEL);
   form.set("prompt", input.prompt);
   form.set("size", `${IMAGE_WIDTH}x${IMAGE_HEIGHT}`);
   form.set("quality", IMAGE_QUALITY);
@@ -232,7 +252,8 @@ export async function generateSectionImage(apiKey: string, input: ImageInput): P
     throw new OpenAiError("IMAGE_NETWORK_FAILED");
   });
 
-  if (!response.ok) throw classifyStatus(response.status, response.headers.get("retry-after"));
+  if (!response.ok)
+    throw await classifyResponse(response, `images/edits(${input.model ?? IMAGE_MODEL})`);
 
   const length = Number(response.headers.get("content-length") ?? "0");
   if (length > RAW_RESPONSE_MAX_BYTES) throw new OpenAiError("IMAGE_RESPONSE_TOO_LARGE");

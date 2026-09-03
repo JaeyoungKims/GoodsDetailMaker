@@ -11,6 +11,8 @@ export interface AppEnv {
   SUPABASE_URL: string;
   /** 기획 텍스트 모델 (선택). 비우면 services/openai.ts 의 기본값 */
   PLAN_MODEL?: string;
+  /** 이미지 모델 (선택). 비우면 shared 의 IMAGE_MODEL(gpt-image-2) */
+  IMAGE_MODEL?: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   SUPABASE_JWT_SECRET?: string;
   TURNSTILE_SECRET_KEY?: string;

@@ -89,7 +89,11 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
     if (!apiKey) return await fail("API_KEY_REQUIRED");
 
     const images = await loadInputImages(env, db, msg.jobId);
-    const raw = await generateSectionImage(apiKey, { prompt: section.image_prompt, images });
+    const raw = await generateSectionImage(apiKey, {
+      prompt: section.image_prompt,
+      images,
+      ...(env.IMAGE_MODEL ? { model: env.IMAGE_MODEL } : {}),
+    });
     const key = r2Keys.raw(msg.userId, msg.jobId, msg.sectionIndex);
     await putObject(env, key, raw, "application/json");
     await setStatus("completed", {
@@ -100,6 +104,10 @@ export async function handleImage(env: AppEnv, msg: ImageMessage): Promise<Image
     await recomputeJobStatus(db, msg.jobId);
     return { kind: "done" };
   } catch (err) {
+    console.error(
+      `[image] job=${msg.jobId} section=${msg.sectionIndex} attempt=${msg.attempt} failed:`,
+      err instanceof OpenAiError ? `${err.kind} ${err.message}` : err,
+    );
     if (err instanceof OpenAiError && err.kind === "OPENAI_RATE_LIMIT") {
       if (msg.attempt >= IMAGE_AUTO_ATTEMPT_MAX) return await fail("IMAGE_ATTEMPT_LIMIT");
       await setStatus("waiting_rate_limit", { error_code: "OPENAI_RATE_LIMIT" });
