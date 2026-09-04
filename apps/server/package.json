@@ -6,8 +6,8 @@
   "description": "자체 호스팅 서버: Node + Hono, Postgres, pg-boss 큐, 로컬 디스크 저장소, 쿠키 세션 로그인, SSE 진행 스트림",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
-    "build": "tsc -p tsconfig.build.json",
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
     "migrate": "tsx src/db/migrate.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests"

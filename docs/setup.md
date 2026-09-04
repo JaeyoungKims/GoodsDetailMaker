@@ -46,9 +46,11 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 
 ```powershell
 pnpm install
-pnpm build          # 웹 빌드 + 서버 빌드
+pnpm build          # 웹 빌드 + 서버 타입검사
 pnpm start          # http://localhost:8787
 ```
+
+서버는 번들 없이 `tsx` 로 TypeScript 를 그대로 실행합니다. `pnpm install` 로 devDependencies 까지 설치돼 있어야 합니다.
 
 개발 중에는 `pnpm dev` (웹 5173 + 서버 8787, 웹이 /api 를 서버로 프록시).
 
@@ -58,9 +60,9 @@ pnpm start          # http://localhost:8787
 
 작업 스케줄러 → 기본 작업 만들기 → 트리거 "로그온할 때" → 동작 "프로그램 시작":
 
-- 프로그램: `C:\Program Files\nodejs\node.exe`
-- 인수: `apps\server\dist\index.js`
-- 시작 위치: 프로젝트 폴더의 `apps\server`
+- 프로그램: `pnpm.cmd` (전체 경로는 PowerShell 에서 `where.exe pnpm` 으로 확인)
+- 인수: `start`
+- 시작 위치: 프로젝트 폴더(루트)
 
 또는 PowerShell 창을 하나 띄워 `pnpm start` 를 실행해 두어도 됩니다.
 
