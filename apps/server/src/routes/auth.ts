@@ -18,7 +18,13 @@ import {
   newSessionToken,
   verifyPassword,
 } from "../services/crypto.js";
-import { authorizeUrl, enabledProviders, fetchProfile, isProvider } from "../services/oauth.js";
+import {
+  authorizeUrl,
+  enabledProviders,
+  fetchProfile,
+  isProvider,
+  safeNext,
+} from "../services/oauth.js";
 
 const credentials = z.object({
   email: z.string().trim().toLowerCase().email().max(200),
@@ -156,12 +162,6 @@ export const authRoutes = new Hono<HonoEnv>()
   });
 
 const OAUTH_COOKIE = "gdm_oauth_state";
-
-/** 열린 리다이렉트를 막는다. 앱 안의 경로만 허용. */
-function safeNext(value: string | undefined): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
-}
 
 /** 로그인 상태에서 소셜 연결을 시도한 경우를 위해, 실패해도 예외를 던지지 않고 읽는다 */
 async function sessionUser(c: Context<HonoEnv>): Promise<string | null> {

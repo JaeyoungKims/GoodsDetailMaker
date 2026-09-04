@@ -1,7 +1,7 @@
 // 소셜 로그인 제공자 활성화 판정과 인가 URL 구성을 검증하는 테스트
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../env.js";
-import { authorizeUrl, enabledProviders, isProvider, redirectUri } from "./oauth.js";
+import { authorizeUrl, enabledProviders, isProvider, redirectUri, safeNext } from "./oauth.js";
 
 function config(extra: Record<string, string> = {}) {
   return loadConfig({
@@ -81,5 +81,28 @@ describe("isProvider", () => {
   it("아는 제공자만 통과시킨다", () => {
     expect(isProvider("google")).toBe(true);
     expect(isProvider("apple")).toBe(false);
+  });
+});
+
+describe("safeNext", () => {
+  it("앱 내부 경로는 그대로 둔다", () => {
+    expect(safeNext("/settings")).toBe("/settings");
+    expect(safeNext("/jobs/abc?tab=1#top")).toBe("/jobs/abc?tab=1#top");
+  });
+
+  it("값이 없거나 상대 경로가 아니면 루트로 보낸다", () => {
+    expect(safeNext(undefined)).toBe("/");
+    expect(safeNext("")).toBe("/");
+    expect(safeNext("https://evil.example")).toBe("/");
+    expect(safeNext("javascript:alert(1)")).toBe("/");
+  });
+
+  it("외부로 나가는 형태를 모두 막는다", () => {
+    // 프로토콜 상대 주소
+    expect(safeNext("//evil.example")).toBe("/");
+    // http 스킴에서 역슬래시는 슬래시로 정규화된다. String.raw 로 역슬래시를 그대로 넣는다.
+    expect(safeNext(String.raw`/\evil.example`)).toBe("/");
+    expect(safeNext(String.raw`/\/evil.example`)).toBe("/");
+    expect(safeNext(String.raw`//\evil.example`)).toBe("/");
   });
 });

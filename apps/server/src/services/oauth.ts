@@ -113,6 +113,23 @@ const PROVIDERS: Record<OAuthProvider, ProviderDef> = {
   },
 };
 
+/**
+ * 로그인 후 돌아갈 앱 내부 경로만 통과시킨다 (열린 리다이렉트 방지).
+ * http 스킴에서는 역슬래시가 슬래시로 정규화되므로 `/\evil.com` 도 외부 주소가 된다.
+ * 문자열 검사 대신 실제로 파싱해 origin 이 바뀌는지 본다.
+ */
+export function safeNext(value: string | undefined): string {
+  if (!value || !value.startsWith("/")) return "/";
+  const base = "http://internal.invalid";
+  try {
+    const url = new URL(value, base);
+    if (url.origin !== base) return "/";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/";
+  }
+}
+
 export function isProvider(value: string): value is OAuthProvider {
   return (OAUTH_PROVIDERS as readonly string[]).includes(value);
 }
