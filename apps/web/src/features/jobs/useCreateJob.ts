@@ -5,9 +5,12 @@ import {
   INPUT_IMAGE_MIN,
   INPUT_IMAGE_TOTAL_MAX_BYTES,
   INPUT_IMAGE_TYPES,
+  OPTION_MAX,
   productBriefSchema,
   type ProductBrief,
+  type ProductOption,
 } from "@gdm/shared";
+import type { OptionDraft } from "@/components/new-job/OptionEditor";
 import { normalizeImage } from "@/features/inputs/normalizeImage";
 import { jobsApi } from "@/lib/api/jobs";
 
@@ -22,6 +25,8 @@ interface Snapshot {
   brief: ProductBrief;
   files: File[];
   inputIds: string[];
+  /** 사진이 있는 옵션만. brief.options 의 inputId 와 짝을 이룬다. */
+  optionFiles: Array<{ inputId: string; file: File }>;
 }
 
 export type CreatePhase = "idle" | "submitting" | "resumable" | "done";
@@ -35,6 +40,27 @@ export interface CreateJobOptions {
   accessToken: string;
   onStarted: (jobId: string) => void;
   uuid?: () => string;
+}
+
+/** 이름이 있는 옵션만 남기고 사진에는 업로드용 id 를 붙인다 */
+function buildOptions(
+  drafts: OptionDraft[],
+  uuid: () => string,
+): { options: ProductOption[]; optionFiles: Array<{ inputId: string; file: File }> } {
+  const options: ProductOption[] = [];
+  const optionFiles: Array<{ inputId: string; file: File }> = [];
+  for (const draft of drafts.slice(0, OPTION_MAX)) {
+    const name = draft.name.trim();
+    if (!name) continue;
+    if (draft.file && draft.file.size > 0) {
+      const inputId = uuid();
+      options.push({ name, inputId });
+      optionFiles.push({ inputId, file: draft.file });
+    } else {
+      options.push({ name });
+    }
+  }
+  return { options, optionFiles };
 }
 
 export function validateFiles(files: File[]): boolean {
@@ -89,10 +115,14 @@ export function useCreateJob({
     setState((prev) => ({ phase: phase ?? prev.phase, message }));
 
   const submit = useCallback(
-    async (input: { brief: unknown; files: File[] }) => {
+    async (input: { brief: unknown; files: File[]; options?: OptionDraft[] }) => {
       if (busy.current || state.phase === "done") return;
 
-      const brief = productBriefSchema.safeParse(input.brief);
+      const built = buildOptions(input.options ?? [], uuid);
+      const brief = productBriefSchema.safeParse({
+        ...(input.brief as Record<string, unknown>),
+        options: built.options,
+      });
       const files = input.files.filter((f) => f.size > 0);
       if (!brief.success || !validateFiles(files)) {
         setMessage(INPUT_RULE_MESSAGE, "idle");
@@ -109,7 +139,13 @@ export function useCreateJob({
       if (prev && sameInput) {
         snap = prev;
       } else {
-        snap = { jobId: uuid(), brief: brief.data, files, inputIds: files.map(uuid) };
+        snap = {
+          jobId: uuid(),
+          brief: brief.data,
+          files,
+          inputIds: files.map(uuid),
+          optionFiles: built.optionFiles,
+        };
         snapshot.current = snap;
         createdJobId.current = null;
         uploaded.current.clear();
@@ -138,6 +174,15 @@ export function useCreateJob({
           });
           await jobsApi.upload(accessToken, jobId, snap.inputIds[i]!, upload);
           uploaded.current.add(i);
+        }
+        for (let i = 0; i < snap.optionFiles.length; i += 1) {
+          const key = snap.files.length + i;
+          if (uploaded.current.has(key)) continue;
+          setMessage(`옵션 사진 업로드 중 (${i + 1}/${snap.optionFiles.length})…`);
+          const entry = snap.optionFiles[i]!;
+          const upload = await normalizeImage(entry.file).catch(() => entry.file);
+          await jobsApi.upload(accessToken, jobId, entry.inputId, upload, "option");
+          uploaded.current.add(key);
         }
         setMessage("생성 대기열에 넣는 중…");
         await jobsApi.start(accessToken, jobId);

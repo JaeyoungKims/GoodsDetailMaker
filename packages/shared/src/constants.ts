@@ -7,6 +7,15 @@ export const IMAGE_QUALITY = "medium";
 /** 한 작업이 만들 수 있는 최대 장 수. 실제 장 수는 사용자가 고른 설득 단계 수(job.section_count)다. */
 export const SECTION_COUNT = 13;
 
+/**
+ * 마켓 썸네일. 이미지 모델이 1000 을 직접 만들지 못해 1024 로 받아 브라우저에서 줄인다.
+ * 문구는 넣지 않는다(마켓 썸네일 정책).
+ */
+export const THUMB_SOURCE_SIZE = 1024;
+export const THUMB_EXPORT_SIZE = 1000;
+/** 한 작업이 가질 수 있는 상품 옵션 수 */
+export const OPTION_MAX = 8;
+
 /** 입력 이미지 한도 */
 export const INPUT_IMAGE_MIN = 1;
 export const INPUT_IMAGE_MAX = 5;

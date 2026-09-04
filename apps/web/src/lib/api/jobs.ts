@@ -8,7 +8,9 @@ import {
   sectionFeedbackSchema,
   sectionFeedbackUpdatedSchema,
   sectionRetrySchema,
+  thumbnailQueuedSchema,
   type Job,
+  type ThumbnailKind,
   type ProductBriefInput,
   type SectionCopyUpdate,
 } from "@gdm/shared";
@@ -32,8 +34,14 @@ export const jobsApi = {
     return created;
   },
 
-  async upload(token: string, jobId: string, inputId: string, file: File) {
-    const body = await apiFetch(token, `/api/jobs/${jobId}/inputs/${inputId}`, {
+  async upload(
+    token: string,
+    jobId: string,
+    inputId: string,
+    file: File,
+    role: "product" | "option" = "product",
+  ) {
+    const body = await apiFetch(token, `/api/jobs/${jobId}/inputs/${inputId}?role=${role}`, {
       method: "PUT",
       headers: { "Content-Type": file.type, "x-file-size": String(file.size) },
       body: file,
@@ -86,6 +94,50 @@ export const jobsApi = {
       body: JSON.stringify(valid.data),
     });
     return parseOr(sectionFeedbackUpdatedSchema.safeParse(body));
+  },
+
+  /** 메인 썸네일을 AI 로 한 장면에 배치하도록 요청한다 (기본 메인은 브라우저 격자 합성) */
+  async requestMainThumbnail(token: string, jobId: string) {
+    const body = await apiFetch(token, `/api/jobs/${jobId}/thumbnails/main`, {
+      method: "POST",
+    });
+    return parseOr(thumbnailQueuedSchema.safeParse(body));
+  },
+
+  async retryThumbnail(
+    token: string,
+    jobId: string,
+    kind: ThumbnailKind,
+    optionIndex: number,
+    signal?: AbortSignal,
+  ) {
+    const body = await apiFetch(
+      token,
+      `/api/jobs/${jobId}/thumbnails/${kind}/${optionIndex}/retry`,
+      { method: "POST", signal: signal ?? null },
+    );
+    return parseOr(thumbnailQueuedSchema.safeParse(body));
+  },
+
+  /** 썸네일 원본 응답 JSON 문자열 */
+  async thumbnailRaw(
+    token: string,
+    jobId: string,
+    kind: ThumbnailKind,
+    optionIndex: number,
+    signal?: AbortSignal,
+  ) {
+    void token;
+    const response = await fetch(`/api/jobs/${jobId}/thumbnails/${kind}/${optionIndex}/raw`, {
+      credentials: "include",
+      signal: signal ?? null,
+    });
+    if (!response.ok) {
+      throw new ApiRequestError(
+        response.status === 404 ? "ARTIFACT_NOT_FOUND" : "JOB_REQUEST_FAILED",
+      );
+    }
+    return response.text();
   },
 
   /** OpenAI 원본 응답 JSON 문자열. 디코드·합성은 features/compose 에서. */

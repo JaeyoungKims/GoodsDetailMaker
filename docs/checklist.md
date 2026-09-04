@@ -50,3 +50,58 @@
       raw 3개 파일 저장, status=completed)
 - [x] 기존 13장 작업(`4f653ecf`)이 그대로 열린다 — role 이 옛 슬롯 순서인데도 13장 completed 로 응답
 - [ ] 브라우저에서 미리보기·JPG·ZIP·세로 합본 확인 (Canvas 합성 경로. 로그인한 브라우저 필요)
+
+## B2. 옵션별 썸네일 + 메인 썸네일 (완료 2026-09-04)
+
+마켓 목록에 걸리는 정사각 썸네일을 만든다. 옵션마다 1장, 옵션 여럿을 한 장에 담은 메인 1장.
+생성은 1024×1024, 내보낼 때 브라우저에서 1000×1000 으로 줄인다. 문구는 넣지 않는다(마켓 정책).
+
+### shared
+
+- [x] `constants.ts` 에 `THUMB_SOURCE_SIZE = 1024`, `THUMB_EXPORT_SIZE = 1000`, `OPTION_MAX = 8` 추가
+- [x] `brief.ts` 에 `options: [{ name, inputId? }]` (≤8, 이름 필수·사진 선택)
+- [x] `schemas/thumbnail.ts` 신설 — `thumbnailKind('main'|'option')`, `thumbnailSchema`, 상태·에러 코드
+- [x] `jobSchema` 에 `thumbnails` 배열 추가 (없으면 빈 배열)
+- [x] `queue.ts` 에 `{kind:"thumbnail", thumbKind, optionIndex}` 메시지 추가
+- [x] `errors.ts` 에 썸네일 관련 코드 추가
+
+### DB (마이그레이션 0004)
+
+- [x] `job_thumbnails` 테이블 (job_id, user_id, kind, option_index, name, input_id, status, attempt, manual_retries, error_code, error_detail, raw_storage_key, raw_bytes)
+- [x] `job_inputs.role` 추가 ('product' | 'option') — 기존 행은 'product'
+- [x] `claim_image_slot` 을 job_sections + job_thumbnails 합산으로 교체
+- [x] `claim_thumbnail_slot` 신규
+- [x] `storage_usage` 에 job_thumbnails 바이트 합산
+- [x] job_thumbnails 상태 변경 NOTIFY 트리거 (SSE)
+
+### server
+
+- [x] `POST /api/jobs` 가 options 를 읽어 job_thumbnails 행을 미리 만든다
+- [x] 입력 업로드에 `role=option` 경로 (옵션 사진은 기획 참조에서 제외)
+- [x] `loadInputImages` 는 role='product' 만 로드
+- [x] start 시 예약 용량에 썸네일 장수 반영
+- [x] `queue/thumbnail.ts` — 게이트 → images/edits(1024×1024) → raw 저장
+- [x] `POST /api/jobs/:id/thumbnails/main` — AI 배치 메인을 따로 요청
+- [x] `GET /api/jobs/:id/thumbnails/:kind/:index/raw`
+- [x] 재시도 라우트
+
+### ai
+
+- [x] `generateThumbnailImage()` — 1024×1024, 문구 없음, 마켓 썸네일 규칙 프롬프트
+- [x] 옵션 썸네일 프롬프트(제품 단독 정면)와 메인 AI 배치 프롬프트(여러 옵션 한 장면) 분리
+
+### web
+
+- [x] 새 상세페이지에 "옵션" 카드 — 옵션명 + 사진 1장, 최대 8개, 추가·삭제
+- [x] 진행 화면에 썸네일 섹션 (메인 1 + 옵션 N)
+- [x] 썸네일 미리보기는 1024 원본 → 1000×1000 축소 후 표시·다운로드
+- [x] 메인 썸네일 격자 합성(Canvas, 기본·무료)과 "AI로 한 장면 만들기" 버튼 둘 다 제공
+- [x] ZIP 내보내기에 썸네일 포함 (`thumb-main.jpg`, `thumb-01-옵션명.jpg`)
+- [x] `assertJpegDimensions` 를 규격 인자로 받게 바꿔 1024×1024 도 검증
+
+### 완료 기준
+
+- [x] 옵션 2개짜리 작업에서 옵션 썸네일 2장 + 격자 메인 1장이 나온다
+- [x] AI 배치 메인을 따로 눌러 만들 수 있다
+- [x] 옵션을 하나도 넣지 않은 작업은 지금과 똑같이 동작한다 (썸네일 섹션 자체가 없음)
+- [x] `pnpm format && pnpm -r typecheck && pnpm -r test` 통과

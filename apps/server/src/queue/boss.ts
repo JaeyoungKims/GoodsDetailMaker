@@ -4,9 +4,11 @@ import type { AppContext } from "../context.js";
 import { cleanupExpiredJobs } from "./cleanup.js";
 import { handleImage } from "./image.js";
 import { handlePlan } from "./plan.js";
+import { handleThumbnail } from "./thumbnail.js";
 
 export const QUEUE_PLAN = "gdm-plan";
 export const QUEUE_IMAGE = "gdm-image";
+export const QUEUE_THUMBNAIL = "gdm-thumbnail";
 export const QUEUE_CLEANUP = "gdm-cleanup";
 
 export function createBoss(databaseUrl: string): PgBoss {
@@ -26,6 +28,12 @@ export async function startQueues(ctx: AppContext) {
     notify: true,
   });
   await boss.createQueue(QUEUE_IMAGE, {
+    retryLimit: 1,
+    retryDelay: 15,
+    expireInSeconds: 600,
+    notify: true,
+  });
+  await boss.createQueue(QUEUE_THUMBNAIL, {
     retryLimit: 1,
     retryDelay: 15,
     expireInSeconds: 600,
@@ -65,6 +73,30 @@ export async function startQueues(ctx: AppContext) {
     }
   });
 
+  await boss.work<QueueMessage>(QUEUE_THUMBNAIL, { batchSize: 1 }, async (jobs) => {
+    for (const job of jobs) {
+      const msg = queueMessageSchema.safeParse(job.data);
+      if (!msg.success || msg.data.kind !== "thumbnail") continue;
+      const outcome = await handleThumbnail(ctx, msg.data);
+      console.log(
+        `[queue] thumbnail job=${msg.data.jobId} ${msg.data.thumbKind}/${msg.data.optionIndex} attempt=${msg.data.attempt} -> ${outcome.kind}`,
+      );
+      if (outcome.kind === "retry") {
+        await enqueue(
+          ctx,
+          { ...msg.data, attempt: outcome.nextAttempt, deferrals: 0 },
+          outcome.delaySeconds,
+        );
+      } else if (outcome.kind === "defer") {
+        await enqueue(
+          ctx,
+          { ...msg.data, deferrals: msg.data.deferrals + 1 },
+          outcome.delaySeconds,
+        );
+      }
+    }
+  });
+
   await boss.work(QUEUE_CLEANUP, async (_jobs: Job[]) => {
     await cleanupExpiredJobs(ctx);
   });
@@ -72,6 +104,7 @@ export async function startQueues(ctx: AppContext) {
 }
 
 export async function enqueue(ctx: AppContext, msg: QueueMessage, delaySeconds = 0) {
-  const name = msg.kind === "plan" ? QUEUE_PLAN : QUEUE_IMAGE;
+  const name =
+    msg.kind === "plan" ? QUEUE_PLAN : msg.kind === "thumbnail" ? QUEUE_THUMBNAIL : QUEUE_IMAGE;
   await ctx.boss.send(name, msg, delaySeconds > 0 ? { startAfter: delaySeconds } : {});
 }

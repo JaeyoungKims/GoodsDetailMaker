@@ -5,6 +5,7 @@ import {
   INPUT_IMAGE_MAX_BYTES,
   INPUT_IMAGE_TOTAL_MAX_BYTES,
   INPUT_IMAGE_TYPES,
+  OPTION_MAX,
   RAW_RESERVE_BYTES_PER_SECTION,
   SECTION_COUNT,
   SECTION_MANUAL_RETRY_MAX,
@@ -13,6 +14,7 @@ import {
   sectionCopyUpdateSchema,
   sectionFeedbackSchema,
   sniffImageType,
+  thumbnailKindSchema,
 } from "@gdm/shared";
 import type { HonoEnv } from "../context.js";
 import { ApiError } from "../lib/errors.js";
@@ -28,9 +30,18 @@ import {
 import { assertJobLimits, assertStorageQuota } from "../services/limits.js";
 import { getSettings } from "../services/settings.js";
 import { storageKeys } from "../services/storage.js";
+import {
+  getThumbnail,
+  insertOptionThumbnails,
+  listThumbnails,
+  upsertMainThumbnail,
+} from "../services/thumbnails.js";
 
 const uuid = z.uuid();
 const sectionIndexParam = z.coerce.number().int().min(1).max(SECTION_COUNT);
+const optionIndexParam = z.coerce.number().int().min(0).max(OPTION_MAX);
+/** 옵션 사진은 기획 참조에서 빠진다. 쿼리를 붙이지 않으면 주력 제품 사진이다. */
+const inputRoleQuery = z.enum(["product", "option"]).default("product");
 
 async function requireJob(c: Context<HonoEnv>) {
   const { sql } = c.get("ctx");
@@ -41,6 +52,15 @@ async function requireJob(c: Context<HonoEnv>) {
   if (job.expires_at && job.expires_at.getTime() < Date.now())
     throw new ApiError("JOB_EXPIRED", 410);
   return { sql, job };
+}
+
+function thumbnailParams(c: Context<HonoEnv>): { kind: "main" | "option"; index: number } {
+  const kind = thumbnailKindSchema.safeParse(c.req.param("kind"));
+  const index = optionIndexParam.safeParse(c.req.param("optionIndex"));
+  if (!kind.success || !index.success) throw new ApiError("THUMBNAIL_NOT_FOUND", 404);
+  if (kind.data === "main" && index.data !== 0) throw new ApiError("THUMBNAIL_NOT_FOUND", 404);
+  if (kind.data === "option" && index.data === 0) throw new ApiError("THUMBNAIL_NOT_FOUND", 404);
+  return { kind: kind.data, index: index.data };
 }
 
 function sectionIndex(c: Context<HonoEnv>): number {
@@ -80,6 +100,7 @@ export const jobRoutes = new Hono<HonoEnv>()
       insert into jobs (id, user_id, status, product_name, brief, story_order, section_count, expires_at)
       values (${idempotencyKey.data}, ${user.id}, 'draft', ${brief.data.productName}, ${sql.json(brief.data as never)},
               ${brief.data.storyOrder}, ${brief.data.storyOrder.length}, ${expiresAt})`;
+    await insertOptionThumbnails(sql, user.id, idempotencyKey.data, brief.data.options);
     return c.json({ id: idempotencyKey.data }, 201);
   })
 
@@ -102,11 +123,16 @@ export const jobRoutes = new Hono<HonoEnv>()
     }
     if (size > INPUT_IMAGE_MAX_BYTES) throw new ApiError("JOB_INPUT_BYTES_LIMIT", 413);
 
-    const inputs = await sql<{ id: string; byte_size: number; upload_attempts: number }[]>`
-      select id, byte_size, upload_attempts from job_inputs where job_id = ${job.id}`;
+    const role = inputRoleQuery.safeParse(c.req.query("role"));
+    if (!role.success) throw new ApiError("INVALID_IMAGE", 400);
+    const inputs = await sql<
+      { id: string; byte_size: number; upload_attempts: number; role: string }[]
+    >`select id, byte_size, upload_attempts, role from job_inputs where job_id = ${job.id}`;
     const existing = inputs.find((i) => i.id === inputId.data);
     const others = inputs.filter((i) => i.id !== inputId.data);
-    if (others.length >= INPUT_IMAGE_MAX) throw new ApiError("JOB_INPUT_LIMIT", 409);
+    const sameRole = others.filter((i) => i.role === role.data);
+    const roleLimit = role.data === "option" ? OPTION_MAX : INPUT_IMAGE_MAX;
+    if (sameRole.length >= roleLimit) throw new ApiError("JOB_INPUT_LIMIT", 409);
     if (others.reduce((s, i) => s + Number(i.byte_size), 0) + size > INPUT_IMAGE_TOTAL_MAX_BYTES) {
       throw new ApiError("JOB_INPUT_BYTES_LIMIT", 413);
     }
@@ -125,10 +151,11 @@ export const jobRoutes = new Hono<HonoEnv>()
     const key = storageKeys.input(job.user_id, job.id, inputId.data, mime);
     await storage.put(key, bytes);
     await sql`
-      insert into job_inputs (id, job_id, user_id, position, storage_key, content_type, byte_size, status, upload_attempts)
-      values (${inputId.data}, ${job.id}, ${job.user_id}, ${others.length}, ${key}, ${mime}, ${size}, 'stored', ${attempts + 1})
+      insert into job_inputs (id, job_id, user_id, position, storage_key, content_type, byte_size, status, upload_attempts, role)
+      values (${inputId.data}, ${job.id}, ${job.user_id}, ${sameRole.length}, ${key}, ${mime}, ${size}, 'stored', ${attempts + 1}, ${role.data})
       on conflict (id) do update set storage_key = excluded.storage_key, content_type = excluded.content_type,
-        byte_size = excluded.byte_size, status = 'stored', upload_attempts = excluded.upload_attempts`;
+        byte_size = excluded.byte_size, status = 'stored', upload_attempts = excluded.upload_attempts,
+        role = excluded.role`;
     return c.json({ stored: true as const });
   })
 
@@ -140,11 +167,26 @@ export const jobRoutes = new Hono<HonoEnv>()
       { n: number }[]
     >`select count(*)::int as n from job_inputs where job_id = ${job.id} and status = 'stored'`;
     if (!count?.n) throw new ApiError("PRODUCT_IMAGE_REQUIRED", 412);
-    const reserved = job.section_count * RAW_RESERVE_BYTES_PER_SECTION;
+    const thumbnails = await listThumbnails(sql, job.id);
+    const reserved = (job.section_count + thumbnails.length) * RAW_RESERVE_BYTES_PER_SECTION;
     await assertStorageQuota(sql, job.user_id, reserved);
     await sql`update jobs set status = 'queued', reserved_bytes = ${reserved} where id = ${job.id}`;
     try {
       await enqueue(c.get("ctx"), { kind: "plan", userId: job.user_id, jobId: job.id });
+      // 썸네일은 기획 결과에 기대지 않으므로 바로 넣는다. 슬롯은 게이트가 나눠 준다.
+      if (c.get("ctx").config.IMAGE_GENERATION_ENABLED) {
+        for (const t of thumbnails) {
+          await enqueue(c.get("ctx"), {
+            kind: "thumbnail",
+            userId: job.user_id,
+            jobId: job.id,
+            thumbKind: t.kind,
+            optionIndex: t.option_index,
+            attempt: 1,
+            deferrals: 0,
+          });
+        }
+      }
     } catch {
       await sql`update jobs set status = 'draft', reserved_bytes = 0 where id = ${job.id}`;
       throw new ApiError("QUEUE_UNAVAILABLE", 503);
@@ -154,9 +196,11 @@ export const jobRoutes = new Hono<HonoEnv>()
 
   .get("/:jobId", async (c) => {
     const { sql, job } = await requireJob(c);
-    return c.json(
-      toJob(job, await listSections(sql, job.id), c.get("ctx").config.IMAGE_GENERATION_ENABLED),
-    );
+    const [sections, thumbnails] = await Promise.all([
+      listSections(sql, job.id),
+      listThumbnails(sql, job.id),
+    ]);
+    return c.json(toJob(job, sections, c.get("ctx").config.IMAGE_GENERATION_ENABLED, thumbnails));
   })
 
   .post("/:jobId/sections/:sectionIndex/retry", async (c) => {
@@ -209,6 +253,69 @@ export const jobRoutes = new Hono<HonoEnv>()
        where job_id = ${job.id} and section_index = ${index} returning *`;
     if (!updated) throw new ApiError("SECTION_NOT_FOUND", 404);
     return c.json({ updated: true as const, section: toSection(updated) });
+  })
+
+  /** 메인 썸네일을 AI 로 한 장면에 배치한다. 기본 메인은 브라우저 격자 합성이라 서버를 쓰지 않는다. */
+  .post("/:jobId/thumbnails/main", async (c) => {
+    const { sql, job } = await requireJob(c);
+    const thumbnails = await listThumbnails(sql, job.id);
+    if (!thumbnails.some((t) => t.kind === "option"))
+      throw new ApiError("THUMBNAIL_OPTIONS_REQUIRED", 409);
+    await upsertMainThumbnail(sql, job.user_id, job.id);
+    const enabled = c.get("ctx").config.IMAGE_GENERATION_ENABLED;
+    if (enabled)
+      await enqueue(c.get("ctx"), {
+        kind: "thumbnail",
+        userId: job.user_id,
+        jobId: job.id,
+        thumbKind: "main",
+        optionIndex: 0,
+        attempt: 1,
+        deferrals: 0,
+      });
+    return c.json({ queued: true as const, kind: "main" as const, optionIndex: 0 });
+  })
+
+  .post("/:jobId/thumbnails/:kind/:optionIndex/retry", async (c) => {
+    const { sql, job } = await requireJob(c);
+    const { kind, index } = thumbnailParams(c);
+    const thumb = await getThumbnail(sql, job.id, kind, index);
+    if (!thumb) throw new ApiError("THUMBNAIL_NOT_FOUND", 404);
+    if (thumb.status === "generating" || thumb.status === "queued")
+      throw new ApiError("THUMBNAIL_NOT_RETRYABLE", 409);
+    if (thumb.manual_retries >= SECTION_MANUAL_RETRY_MAX)
+      throw new ApiError("SECTION_MANUAL_RETRY_LIMIT", 429);
+    await sql`update job_thumbnails set status = 'queued', error_code = null, error_detail = null,
+              attempt = 0, manual_retries = ${thumb.manual_retries + 1}
+              where job_id = ${job.id} and kind = ${kind} and option_index = ${index}`;
+    const enabled = c.get("ctx").config.IMAGE_GENERATION_ENABLED;
+    if (enabled)
+      await enqueue(c.get("ctx"), {
+        kind: "thumbnail",
+        userId: job.user_id,
+        jobId: job.id,
+        thumbKind: kind,
+        optionIndex: index,
+        attempt: 1,
+        deferrals: 0,
+      });
+    return c.json({ queued: true as const, kind, optionIndex: index });
+  })
+
+  .get("/:jobId/thumbnails/:kind/:optionIndex/raw", async (c) => {
+    const { job } = await requireJob(c);
+    const { kind, index } = thumbnailParams(c);
+    const buf = await c
+      .get("ctx")
+      .storage.get(storageKeys.thumbRaw(job.user_id, job.id, kind, index));
+    if (!buf) throw new ApiError("ARTIFACT_NOT_FOUND", 404);
+    return new Response(new Uint8Array(buf), {
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": String(buf.byteLength),
+        "Cache-Control": "private, no-store",
+      },
+    });
   })
 
   /** 원본 응답 JSON. 브라우저가 디코드·합성한다. */

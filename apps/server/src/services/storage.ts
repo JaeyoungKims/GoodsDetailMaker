@@ -13,6 +13,8 @@ export const storageKeys = {
     `users/${userId}/jobs/${jobId}/inputs/${inputId}.${EXT[contentType] ?? "bin"}`,
   raw: (userId: string, jobId: string, sectionIndex: number) =>
     `users/${userId}/jobs/${jobId}/raw/${String(sectionIndex).padStart(2, "0")}.json`,
+  thumbRaw: (userId: string, jobId: string, kind: string, optionIndex: number) =>
+    `users/${userId}/jobs/${jobId}/thumbs/${kind}-${String(optionIndex).padStart(2, "0")}.json`,
   jobPrefix: (userId: string, jobId: string) => `users/${userId}/jobs/${jobId}`,
 };
 

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { DEFAULT_STORY_ORDER, type StoryStage, type Tone } from "@gdm/shared";
 import { CreationSummary } from "@/components/new-job/CreationSummary";
 import { ImageDropzone } from "@/components/new-job/ImageDropzone";
+import { OptionEditor, type OptionDraft } from "@/components/new-job/OptionEditor";
 import { StoryOrderEditor, StoryOrderReset } from "@/components/new-job/StoryOrderEditor";
 import { StylePicker } from "@/components/new-job/StylePicker";
 import { useAccessToken } from "@/features/auth/useAuth";
@@ -24,6 +25,7 @@ export function NewJobPage() {
   const [tone, setTone] = useState<Tone>("warm_lifestyle");
   const [stageOrder, setStageOrder] = useState<StoryStage[]>([...DEFAULT_STORY_ORDER]);
   const [excluded, setExcluded] = useState<ReadonlySet<StoryStage>>(new Set());
+  const [options, setOptions] = useState<OptionDraft[]>([]);
   const storyOrder = stageOrder.filter((stage) => !excluded.has(stage));
   const { state, submit } = useCreateJob({
     accessToken,
@@ -64,6 +66,7 @@ export function NewJobPage() {
         storyOrder,
       },
       files,
+      options,
     });
   }
 
@@ -223,9 +226,21 @@ export function NewJobPage() {
               <ImageDropzone files={files} onChange={setFiles} />
             </section>
 
-            <section className="form-card story-order-card" aria-labelledby="story-section-title">
+            <section className="form-card" aria-labelledby="option-section-title">
               <header className="form-card__header">
                 <span>04</span>
+                <div>
+                  <p>OPTIONS</p>
+                  <h2 id="option-section-title">옵션이 있나요?</h2>
+                </div>
+                <small>썸네일용 · 선택</small>
+              </header>
+              <OptionEditor options={options} onChange={setOptions} />
+            </section>
+
+            <section className="form-card story-order-card" aria-labelledby="story-section-title">
+              <header className="form-card__header">
+                <span>05</span>
                 <div>
                   <p>STORY FLOW</p>
                   <h2 id="story-section-title">추천 설득 흐름</h2>

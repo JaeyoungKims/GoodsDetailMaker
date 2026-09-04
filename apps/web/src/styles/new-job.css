@@ -710,3 +710,100 @@
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* 옵션 입력 (썸네일용) */
+.option-editor {
+  display: grid;
+  gap: 12px;
+  padding: 18px 22px 22px;
+}
+.option-editor__lead {
+  color: var(--muted);
+  font-size: 13px;
+}
+.option-editor__note {
+  color: var(--muted);
+  font-size: 12px;
+}
+.option-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.option-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.option-list li > b {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-size: 11px;
+}
+.option-list input[type="text"] {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.option-photo {
+  max-width: 150px;
+  overflow: hidden;
+  padding: 8px 12px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.option-photo.is-set {
+  border-style: solid;
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+.option-remove {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+}
+.option-remove:hover {
+  border-color: var(--danger, #d14343);
+  color: var(--danger, #d14343);
+}
+.option-add {
+  justify-self: start;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.option-add:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+.option-add:disabled {
+  opacity: 0.4;
+}

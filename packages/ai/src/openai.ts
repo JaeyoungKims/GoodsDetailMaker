@@ -11,6 +11,7 @@ import {
   IMAGE_QUALITY,
   IMAGE_WIDTH,
   RAW_RESPONSE_MAX_BYTES,
+  THUMB_SOURCE_SIZE,
   sectionPlanListSchema,
   type ProductBrief,
   type SectionPlan,
@@ -301,10 +302,22 @@ export interface ImageInput {
  * 원본 응답 JSON 문자열을 그대로 돌려주고 R2 에 저장한다(클라이언트가 디코드·합성).
  */
 export async function generateSectionImage(apiKey: string, input: ImageInput): Promise<string> {
+  return requestImage(apiKey, input, `${IMAGE_WIDTH}x${IMAGE_HEIGHT}`);
+}
+
+/**
+ * 마켓 썸네일 1장: 정사각 1024×1024 생성. 문구는 넣지 않는다.
+ * 브라우저가 내보낼 때 1000×1000 으로 줄인다.
+ */
+export async function generateThumbnailImage(apiKey: string, input: ImageInput): Promise<string> {
+  return requestImage(apiKey, input, `${THUMB_SOURCE_SIZE}x${THUMB_SOURCE_SIZE}`);
+}
+
+async function requestImage(apiKey: string, input: ImageInput, size: string): Promise<string> {
   const form = new FormData();
   form.set("model", input.model ?? IMAGE_MODEL);
   form.set("prompt", input.prompt);
-  form.set("size", `${IMAGE_WIDTH}x${IMAGE_HEIGHT}`);
+  form.set("size", size);
   form.set("quality", IMAGE_QUALITY);
   form.set("output_format", "jpeg");
   form.set("n", "1");

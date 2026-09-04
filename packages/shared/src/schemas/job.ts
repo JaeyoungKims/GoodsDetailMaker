@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SECTION_COUNT } from "../constants.js";
 import { storyOrderSchema } from "./brief.js";
 import { sectionIndexSchema, sectionSchema } from "./section.js";
+import { thumbnailListSchema } from "./thumbnail.js";
 
 export const jobStatusSchema = z.enum([
   "draft",
@@ -41,6 +42,8 @@ export const jobSchema = z.object({
   status: jobStatusSchema,
   storyOrder: storyOrderSchema,
   sections: orderedSections,
+  /** 옵션을 넣지 않은 작업은 빈 배열 */
+  thumbnails: thumbnailListSchema.default([]),
   imageGenerationEnabled: z.boolean(),
   /** 기획 단계 등 작업 전체가 실패했을 때의 코드 (섹션이 없을 수 있다) */
   errorCode: z.string().nullable().optional(),

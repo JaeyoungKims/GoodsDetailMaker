@@ -5,5 +5,6 @@ export * from "./errors.js";
 export * from "./imageSniff.js";
 export * from "./schemas/brief.js";
 export * from "./schemas/section.js";
+export * from "./schemas/thumbnail.js";
 export * from "./schemas/job.js";
 export * from "./schemas/queue.js";

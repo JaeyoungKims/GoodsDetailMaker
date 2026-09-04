@@ -48,9 +48,24 @@ export async function handlePlan(ctx: AppContext, msg: PlanMessage) {
   }
 }
 
-export async function loadInputImages(ctx: AppContext, jobId: string) {
-  const rows = await ctx.sql<{ storage_key: string; content_type: string }[]>`
-    select storage_key, content_type from job_inputs where job_id = ${jobId} and status = 'stored' order by position`;
+/**
+ * 참조 사진을 읽는다. 기본은 주력 제품 사진만.
+ * 옵션 사진을 섞으면 본문 이미지의 제품 색이 흔들리므로 role 로 갈라 둔다.
+ */
+export async function loadInputImages(
+  ctx: AppContext,
+  jobId: string,
+  filter: { role?: "product" | "option"; inputId?: string } = {},
+) {
+  const role = filter.role ?? "product";
+  const rows = filter.inputId
+    ? await ctx.sql<{ storage_key: string; content_type: string }[]>`
+        select storage_key, content_type from job_inputs
+         where job_id = ${jobId} and id = ${filter.inputId} and status = 'stored'`
+    : await ctx.sql<{ storage_key: string; content_type: string }[]>`
+        select storage_key, content_type from job_inputs
+         where job_id = ${jobId} and status = 'stored' and role = ${role}
+         order by position`;
   const images: Array<{ bytes: ArrayBuffer; contentType: string }> = [];
   for (const row of rows) {
     const buf = await ctx.storage.get(row.storage_key);

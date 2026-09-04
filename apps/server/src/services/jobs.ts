@@ -7,6 +7,7 @@ import {
   type SectionPlan,
 } from "@gdm/shared";
 import type { Sql } from "../db/client.js";
+import { toThumbnail, type ThumbnailRow } from "./thumbnails.js";
 
 export interface JobRow {
   id: string;
@@ -67,7 +68,12 @@ export function toSection(row: SectionRow): Section {
   };
 }
 
-export function toJob(row: JobRow, sections: SectionRow[], generationEnabled: boolean): Job {
+export function toJob(
+  row: JobRow,
+  sections: SectionRow[],
+  generationEnabled: boolean,
+  thumbnails: ThumbnailRow[] = [],
+): Job {
   const ordered = [...sections].sort((a, b) => a.section_index - b.section_index).map(toSection);
   return jobSchema.parse({
     jobId: row.id,
@@ -78,6 +84,7 @@ export function toJob(row: JobRow, sections: SectionRow[], generationEnabled: bo
     imageGenerationEnabled: generationEnabled && row.image_generation_enabled,
     errorCode: row.error_code ?? null,
     errorDetail: row.error_detail ?? null,
+    thumbnails: thumbnails.map(toThumbnail),
   });
 }
 

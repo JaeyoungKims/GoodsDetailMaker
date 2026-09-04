@@ -11,10 +11,15 @@ const MAX_DECODED_BYTES = 9_000_000;
 const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 /**
- * JPEG 마커를 걸어 SOF 세그먼트의 크기가 1024×1536 인지 확인한다.
+ * JPEG 마커를 걸어 SOF 세그먼트의 크기가 기대 규격인지 확인한다.
  * 이미지 모델이 규격과 다른 결과를 돌려주면 합성 전에 걸러낸다.
+ * 본문은 1024×1536, 썸네일은 1024×1024 라 규격을 인자로 받는다.
  */
-export function assertJpegDimensions(bytes: Uint8Array): void {
+export function assertJpegDimensions(
+  bytes: Uint8Array,
+  expectedWidth: number = IMAGE_WIDTH,
+  expectedHeight: number = IMAGE_HEIGHT,
+): void {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8)
     throw new ComposeError("RAW_IMAGE_INVALID");
   let offset = 2;
@@ -39,7 +44,7 @@ export function assertJpegDimensions(bytes: Uint8Array): void {
     if (isSof) {
       const height = (bytes[offset + 5]! << 8) | bytes[offset + 6]!;
       const width = (bytes[offset + 7]! << 8) | bytes[offset + 8]!;
-      if (width !== IMAGE_WIDTH || height !== IMAGE_HEIGHT)
+      if (width !== expectedWidth || height !== expectedHeight)
         throw new ComposeError("RAW_IMAGE_DIMENSIONS");
       return;
     }
@@ -50,7 +55,11 @@ export function assertJpegDimensions(bytes: Uint8Array): void {
 }
 
 /** OpenAI 이미지 응답 JSON 문자열 → 검증된 JPEG 바이트 */
-export function decodeRawResponse(text: string): Uint8Array {
+export function decodeRawResponse(
+  text: string,
+  expectedWidth: number = IMAGE_WIDTH,
+  expectedHeight: number = IMAGE_HEIGHT,
+): Uint8Array {
   if (text.length > RAW_RESPONSE_MAX_BYTES) throw new ComposeError("RAW_RESPONSE_INVALID");
   let parsed: unknown;
   try {
@@ -76,6 +85,6 @@ export function decodeRawResponse(text: string): Uint8Array {
   }
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  assertJpegDimensions(bytes);
+  assertJpegDimensions(bytes, expectedWidth, expectedHeight);
   return bytes;
 }

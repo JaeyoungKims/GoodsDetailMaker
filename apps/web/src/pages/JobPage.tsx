@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router";
-import { STORY_STAGE_LABELS, type Section, type SectionCopyUpdate } from "@gdm/shared";
+import {
+  STORY_STAGE_LABELS,
+  type Section,
+  type SectionCopyUpdate,
+  type ThumbnailKind,
+} from "@gdm/shared";
 import { ExportPanel, type ExportKind } from "@/components/job/ExportPanel";
 import { JobHero } from "@/components/job/JobHero";
 import { SectionCard } from "@/components/job/SectionCard";
+import { ThumbnailPanel } from "@/components/job/ThumbnailPanel";
 import { useAuth } from "@/features/auth/useAuth";
 import { PreviewCache } from "@/features/compose/previewCache";
 import { fileNames, triggerDownload } from "@/features/export/download";
@@ -57,6 +63,7 @@ function JobView({ jobId }: { jobId: string }) {
   const [, bump] = useState(0);
   const [notice, setNotice] = useState("");
   const [exportMessage, setExportMessage] = useState("");
+  const [thumbFiles, setThumbFiles] = useState<Array<{ name: string; blob: Blob }>>([]);
   const [exporting, setExporting] = useState<ExportKind | null>(null);
   const exportAbort = useRef<AbortController | null>(null);
 
@@ -116,6 +123,31 @@ function JobView({ jobId }: { jobId: string }) {
     [jobId, token],
   );
 
+  const onRequestMainThumbnail = useCallback(() => {
+    void (async () => {
+      try {
+        await jobsApi.requestMainThumbnail(token, jobId);
+        await refresh();
+      } catch {
+        /* 실패는 썸네일 카드 상태로 드러난다 */
+      }
+    })();
+  }, [jobId, token, refresh]);
+
+  const onRetryThumbnail = useCallback(
+    (kind: ThumbnailKind, optionIndex: number) => {
+      void (async () => {
+        try {
+          await jobsApi.retryThumbnail(token, jobId, kind, optionIndex);
+          await refresh();
+        } catch {
+          /* 실패는 썸네일 카드 상태로 드러난다 */
+        }
+      })();
+    },
+    [jobId, token, refresh],
+  );
+
   async function exportAll(kind: ExportKind) {
     if (!job || exporting) return;
     const blobs = cache.current.orderedCurrent(jobId, job.sections);
@@ -137,7 +169,10 @@ function JobView({ jobId }: { jobId: string }) {
             ).exportZip(
               blobs,
               job.sections.map((s) => s.role),
-              { signal: controller.signal },
+              thumbFiles,
+              {
+                signal: controller.signal,
+              },
             )
           : await (
               await import("@/features/export/exportVertical")
@@ -280,6 +315,16 @@ function JobView({ jobId }: { jobId: string }) {
           })}
         </section>
       )}
+
+      <ThumbnailPanel
+        jobId={jobId}
+        accessToken={token}
+        productName={job.productName}
+        thumbnails={job.thumbnails}
+        onRequestMain={onRequestMainThumbnail}
+        onRetry={onRetryThumbnail}
+        onFilesReady={setThumbFiles}
+      />
     </main>
   );
 }

@@ -33,6 +33,24 @@ export async function decideDispatch(input: DispatchInput): Promise<DispatchDeci
   };
 }
 
+/** 썸네일도 섹션과 같은 동시 생성 한도를 나눠 쓴다 (DB 함수가 두 테이블을 합산한다) */
+export async function claimThumbnailSlot(
+  sql: Sql,
+  args: {
+    userId: string;
+    jobId: string;
+    kind: string;
+    optionIndex: number;
+    limit: number;
+    attempt: number;
+  },
+): Promise<boolean> {
+  const [row] = await sql<{ claim_thumbnail_slot: boolean }[]>`
+    select claim_thumbnail_slot(${args.userId}, ${args.jobId}, ${args.kind}, ${args.optionIndex},
+                                ${args.limit}, ${args.attempt}, ${STALE_GENERATING_MINUTES})`;
+  return row?.claim_thumbnail_slot === true;
+}
+
 export async function claimImageSlot(
   sql: Sql,
   args: { userId: string; jobId: string; sectionIndex: number; limit: number; attempt: number },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OPTION_MAX } from "../constants.js";
 import { DEFAULT_STORY_ORDER, STORY_STAGES } from "../story.js";
 import { LEGACY_TONES, TONES } from "../tone.js";
 
@@ -19,6 +20,13 @@ export const storyOrderSchema = z
     }
   });
 
+/** 상품 옵션 하나. 사진은 선택이며, 없으면 주력 제품 사진으로 썸네일을 만든다. */
+export const productOptionSchema = z.object({
+  name: line(40),
+  inputId: z.uuid().optional(),
+});
+export type ProductOption = z.infer<typeof productOptionSchema>;
+
 export const toneSchema = z.enum([...TONES, ...LEGACY_TONES]);
 
 /** POST /api/jobs 요청 본문 */
@@ -32,6 +40,8 @@ export const productBriefSchema = z.object({
   prohibitedClaims: z.array(line(120)).max(10).default([]),
   additionalNotes: z.string().trim().max(1000).default(""),
   storyOrder: storyOrderSchema.default([...DEFAULT_STORY_ORDER]),
+  /** 비어 있으면 썸네일을 만들지 않는다 */
+  options: z.array(productOptionSchema).max(OPTION_MAX).default([]),
 });
 export type ProductBrief = z.infer<typeof productBriefSchema>;
 export type ProductBriefInput = z.input<typeof productBriefSchema>;
