@@ -6,6 +6,7 @@ import { InfoPage } from "./pages/InfoPage";
 import { JobPage } from "./pages/JobPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NewJobPage } from "./pages/NewJobPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 /** 로그인 후에만 보이는 작업 라우트 */
@@ -32,6 +33,7 @@ export function App() {
         <Route path="/help" element={<InfoPage kind="help" />} />
         <Route path="/privacy" element={<InfoPage kind="privacy" />} />
         <Route path="/terms" element={<InfoPage kind="terms" />} />
+        <Route path="/reset" element={<ResetPasswordPage />} />
         <Route path="*" element={<AuthenticatedRoutes />} />
       </Routes>
     </AppShell>

@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** .env 에 항목만 있고 값이 비어 있으면 미설정으로 본다 (빈 문자열로 서버가 죽지 않도록) */
+const optionalText = z.preprocess((v) => (v === "" ? undefined : v), z.string().min(1).optional());
+
 /** 서버 설정. 환경변수(.env)에서 읽는다. */
 const schema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -20,6 +23,15 @@ const schema = z.object({
     .transform((v) => v !== "false"),
   PLAN_MODEL: z.string().default("gpt-5-mini"),
   IMAGE_MODEL: z.string().default("gpt-image-2"),
+  /** 소셜 로그인 리다이렉트의 기준 주소. 도메인이 생기면 이 값만 바꾼다 */
+  PUBLIC_BASE_URL: z.string().url().default("http://localhost:8787"),
+  /** 소셜 로그인 클라이언트. 채워진 제공자만 로그인 화면에 노출된다 */
+  GOOGLE_CLIENT_ID: optionalText,
+  GOOGLE_CLIENT_SECRET: optionalText,
+  KAKAO_CLIENT_ID: optionalText,
+  KAKAO_CLIENT_SECRET: optionalText,
+  NAVER_CLIENT_ID: optionalText,
+  NAVER_CLIENT_SECRET: optionalText,
   /** 회원가입 허용 여부. false 면 기존 계정만 로그인 가능 */
   ALLOW_SIGNUP: z
     .string()

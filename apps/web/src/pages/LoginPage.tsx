@@ -1,8 +1,33 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router";
+import { OAUTH_PROVIDER_LABELS, PASSWORD_MIN_LENGTH, type OAuthProvider } from "@gdm/shared";
 import { useAuth } from "@/features/auth/useAuth";
+import { authApi } from "@/lib/api/auth";
 import { ApiRequestError } from "@/lib/api/http";
 
 type Mode = "login" | "signup";
+
+/** 소셜 로그인 콜백이 ?authError=CODE 로 돌려보낸 실패 사유 */
+function oauthMessageFor(code: string): string {
+  switch (code) {
+    case "OAUTH_PROVIDER_DISABLED":
+      return "지금은 쓸 수 없는 로그인 방식입니다.";
+    case "OAUTH_STATE_INVALID":
+      return "로그인 요청이 만료되었습니다. 다시 시도해 주세요.";
+    case "OAUTH_EXCHANGE_FAILED":
+      return "소셜 로그인 제공자와 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    case "OAUTH_EMAIL_REQUIRED":
+      return "이메일 제공에 동의해야 로그인할 수 있습니다.";
+    case "OAUTH_LINK_REQUIRES_LOGIN":
+      return "같은 이메일의 계정이 이미 있습니다. 비밀번호로 로그인한 뒤 설정에서 연결해 주세요.";
+    case "OAUTH_ALREADY_LINKED":
+      return "이 소셜 계정은 다른 계정에 연결돼 있습니다.";
+    case "SIGNUP_DISABLED":
+      return "지금은 새 계정을 만들 수 없습니다. 운영자에게 문의해 주세요.";
+    default:
+      return "소셜 로그인을 마치지 못했습니다. 다시 시도해 주세요.";
+  }
+}
 
 function messageFor(err: unknown, mode: Mode): string {
   const code = err instanceof ApiRequestError ? err.code : "";
@@ -10,7 +35,7 @@ function messageFor(err: unknown, mode: Mode): string {
     case "INVALID_CREDENTIALS":
       return mode === "login"
         ? "이메일 또는 비밀번호가 맞지 않습니다."
-        : "이메일 형식과 비밀번호(8자 이상)를 확인해 주세요.";
+        : `이메일 형식과 비밀번호(${PASSWORD_MIN_LENGTH}자 이상)를 확인해 주세요.`;
     case "EMAIL_TAKEN":
       return "이미 가입된 이메일입니다. 로그인해 주세요.";
     case "SIGNUP_DISABLED":
@@ -23,11 +48,22 @@ function messageFor(err: unknown, mode: Mode): string {
 /** 이메일+비밀번호 로그인·가입. 첫 계정이 관리자가 된다. 소셜 로그인은 추후 이 화면에 버튼으로 추가. */
 export function LoginPage() {
   const { signIn, signUp } = useAuth();
+  const [params] = useSearchParams();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [providers, setProviders] = useState<OAuthProvider[]>([]);
+
+  const authError = params.get("authError");
+
+  useEffect(() => {
+    authApi
+      .providers()
+      .then(setProviders)
+      .catch(() => setProviders([]));
+  }, []);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -88,7 +124,7 @@ export function LoginPage() {
           <p>
             {mode === "login"
               ? "이메일과 비밀번호로 로그인합니다."
-              : "이메일과 비밀번호(8자 이상)로 계정을 만듭니다. 첫 계정은 관리자가 됩니다."}
+              : `이메일과 비밀번호(${PASSWORD_MIN_LENGTH}자 이상)로 계정을 만듭니다. 첫 계정은 관리자가 됩니다.`}
           </p>
           <label htmlFor="email">이메일 주소</label>
           <input
@@ -107,7 +143,7 @@ export function LoginPage() {
             type="password"
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             required
-            minLength={8}
+            minLength={PASSWORD_MIN_LENGTH}
             value={password}
             disabled={busy}
             onChange={(e) => setPassword(e.target.value)}
@@ -115,10 +151,24 @@ export function LoginPage() {
           <button type="submit" disabled={busy}>
             {busy ? "확인 중…" : mode === "login" ? "로그인" : "가입하고 시작하기"}
           </button>
-          {message && (
+          {(message || authError) && (
             <p className="login-message" role="status" aria-live="polite">
-              {message}
+              {message ?? oauthMessageFor(authError as string)}
             </p>
+          )}
+          {providers.length > 0 && (
+            <div className="login-providers">
+              <span className="login-divider">또는</span>
+              {providers.map((provider) => (
+                <a
+                  key={provider}
+                  className={`login-provider login-provider--${provider}`}
+                  href={`/api/auth/oauth/${provider}?next=/`}
+                >
+                  {OAUTH_PROVIDER_LABELS[provider]} 계정으로 계속하기
+                </a>
+              ))}
+            </div>
           )}
           <button
             type="button"

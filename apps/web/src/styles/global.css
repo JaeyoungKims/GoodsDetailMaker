@@ -370,6 +370,89 @@ p {
   font-weight: 600;
 }
 
+/* 재설정 화면처럼 소개 영역 없이 카드만 보여줄 때 */
+.auth-standalone {
+  min-height: 100vh;
+}
+.login-providers {
+  display: grid;
+  gap: 8px;
+}
+.login-divider {
+  justify-self: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+.login-provider {
+  display: grid;
+  place-items: center;
+  min-height: 46px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.login-provider:hover {
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+.login-provider--kakao {
+  border-color: #f5dc00;
+  background: #fee500;
+  color: #1c1b18;
+}
+.login-provider--naver {
+  border-color: #03c75a;
+  background: #03c75a;
+  color: #fff;
+}
+.login-provider--kakao:hover,
+.login-provider--naver:hover {
+  color: inherit;
+  filter: brightness(0.96);
+}
+
+/* 연결된 소셜 계정 목록 */
+.identity-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.identity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.identity-row button,
+.identity-row a {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  background: var(--surface);
+  color: var(--primary-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.reset-link {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 /* 설정 */
 .settings-hero {
   width: min(var(--container), calc(100% - 40px));
