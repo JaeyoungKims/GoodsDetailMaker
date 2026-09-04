@@ -7,6 +7,7 @@ import {
   type Section,
   type SectionCopy,
   type SectionCopyUpdate,
+  type CopyStyle,
 } from "@gdm/shared";
 import { composeSection } from "@/features/compose/compose";
 import { previewQueue } from "@/features/compose/previewQueue";
@@ -27,6 +28,7 @@ interface Props {
   jobId: string;
   accessToken: string;
   stageLabel?: string | undefined;
+  copyStyle: CopyStyle;
   cachedBlob: Blob | null;
   downloadName: string;
   onPreviewReady: (index: number, copyVersion: number, blob: Blob) => void;
@@ -61,6 +63,7 @@ export function SectionCard({
   onFeedbackSave,
   onCopyApplied,
   onConflict,
+  copyStyle,
 }: Props) {
   const identity = `${jobId}:${section.index}:${section.copyVersion}`;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -126,7 +129,7 @@ export function SectionCard({
         .run(async () => {
           const raw = await jobsApi.raw(accessToken, jobId, section.index, controller.signal);
           if (controller.signal.aborted) throw new Error("PREVIEW_ABORTED");
-          return composeSection(raw, section);
+          return composeSection(raw, section, copyStyle);
         }, controller.signal)
         .then((blob) => !controller.signal.aborted && ready(blob, false))
         .catch(() => !controller.signal.aborted && setPreviewFailed(true));

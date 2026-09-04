@@ -89,10 +89,20 @@ function wrapText(text: string, maxWidth: number, measure: (t: string) => number
  * 카피 배치 계산. 영역(720px)에 들어갈 때까지 1.8% 씩 최대 36단계 축소한다.
  * 헤드라인 700/72, 서브 400/36(gap 24), 불릿 400/30(첫 gap 30, 이후 10), 줄간 1.3.
  */
+export interface LayoutOptions {
+  /** 좌우 여백. 카드처럼 안쪽에 판을 깔면 더 넓게 준다. */
+  padX?: number;
+  /** 글자가 쓸 수 있는 폭 */
+  textWidth?: number;
+}
+
 export function layoutCopy(
   copy: SectionCopy & { copyPlacement: CopyPlacement },
   measure: MeasureFn,
+  options: LayoutOptions = {},
 ): CopyLayout {
+  const padX = options.padX ?? PAD_X;
+  const textWidth = options.textWidth ?? TEXT_WIDTH;
   const top = zoneTop(copy.copyPlacement);
   const blocks = [
     { kind: "headline" as const, text: copy.headline, weight: 700, baseSize: 72, gap: 0 },
@@ -120,7 +130,7 @@ export function layoutCopy(
     const scale = 1 - step * 0.018;
     const sized = blocks.map((block) => {
       const fontSize = Math.max(18, Math.round(block.baseSize * scale));
-      const maxWidth = block.kind === "bullet" ? TEXT_WIDTH - BULLET_INDENT : TEXT_WIDTH;
+      const maxWidth = block.kind === "bullet" ? textWidth - BULLET_INDENT : textWidth;
       const lines = wrapText(block.text, maxWidth, (t) => measure(t, fontSize, block.weight));
       return {
         ...block,
@@ -143,7 +153,7 @@ export function layoutCopy(
           kind: block.kind,
           firstInBlock: i === 0,
           text,
-          x: block.kind === "bullet" ? PAD_X + BULLET_INDENT : PAD_X,
+          x: block.kind === "bullet" ? padX + BULLET_INDENT : padX,
           y: y + block.lineHeight * 0.82,
           fontSize: block.fontSize,
           fontWeight: block.weight,

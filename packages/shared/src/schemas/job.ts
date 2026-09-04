@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SECTION_COUNT } from "../constants.js";
+import { COPY_STYLES, COPY_STYLE_DEFAULT } from "../copyStyle.js";
 import { storyOrderSchema } from "./brief.js";
 import { sectionIndexSchema, sectionSchema } from "./section.js";
 import { thumbnailListSchema } from "./thumbnail.js";
@@ -42,6 +43,8 @@ export const jobSchema = z.object({
   status: jobStatusSchema,
   storyOrder: storyOrderSchema,
   sections: orderedSections,
+  /** 문구 합성 방식. 옛 작업은 그라데이션으로 읽는다. */
+  copyStyle: z.enum(COPY_STYLES).default(COPY_STYLE_DEFAULT),
   /** 옵션을 넣지 않은 작업은 빈 배열 */
   thumbnails: thumbnailListSchema.default([]),
   imageGenerationEnabled: z.boolean(),

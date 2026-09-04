@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OPTION_MAX } from "../constants.js";
+import { COPY_STYLES, COPY_STYLE_DEFAULT } from "../copyStyle.js";
 import { DEFAULT_STORY_ORDER, STORY_STAGES } from "../story.js";
 import { LEGACY_TONES, TONES } from "../tone.js";
 
@@ -42,6 +43,8 @@ export const productBriefSchema = z.object({
   prohibitedClaims: z.array(line(120)).max(10).default([]),
   additionalNotes: z.string().trim().max(1000).default(""),
   storyOrder: storyOrderSchema.default([...DEFAULT_STORY_ORDER]),
+  /** 문구를 이미지에 얹는 방식. 작업 전체에 같은 것을 쓴다. */
+  copyStyle: z.enum(COPY_STYLES).default(COPY_STYLE_DEFAULT),
   /** 비어 있으면 썸네일을 만들지 않는다 */
   options: z.array(productOptionSchema).max(OPTION_MAX).default([]),
 });

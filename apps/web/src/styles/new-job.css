@@ -807,3 +807,69 @@
 .option-add:disabled {
   opacity: 0.4;
 }
+
+/* 문구 얹는 방식 선택 */
+.copy-style-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 10px;
+}
+.copy-style-chip {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  text-align: center;
+}
+.copy-style-chip:hover {
+  border-color: var(--primary);
+}
+.copy-style-chip.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+.copy-style-chip strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.copy-style-chip__preview {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  height: 78px;
+  border-radius: 7px;
+}
+.copy-style-chip__photo {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 44% at 50% 34%, #c9a27a 0%, #a4744c 60%, #7d5334 100%),
+    linear-gradient(180deg, #efe6d8, #cbbba6);
+}
+.copy-style-chip__plate {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  height: 46%;
+  padding: 0 9px;
+}
+.copy-style-chip__plate b,
+.copy-style-chip__plate i {
+  display: block;
+  height: 5px;
+  border-radius: 2px;
+}
+.copy-style-chip__plate b {
+  width: 74%;
+}
+.copy-style-chip__plate i {
+  width: 46%;
+  height: 3px;
+  opacity: 0.72;
+}

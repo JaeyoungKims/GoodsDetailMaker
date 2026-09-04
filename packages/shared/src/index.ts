@@ -1,6 +1,7 @@
 export * from "./constants.js";
 export * from "./story.js";
 export * from "./tone.js";
+export * from "./copyStyle.js";
 export * from "./errors.js";
 export * from "./imageSniff.js";
 export * from "./schemas/brief.js";

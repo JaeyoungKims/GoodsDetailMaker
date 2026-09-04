@@ -297,6 +297,7 @@ function JobView({ jobId }: { jobId: string }) {
                 jobId={jobId}
                 accessToken={token}
                 stageLabel={stage ? STORY_STAGE_LABELS[stage] : undefined}
+                copyStyle={job.copyStyle}
                 cachedBlob={cache.current.get(jobId, section.index, section.copyVersion)}
                 downloadName={fileNames.section(
                   job.productName,

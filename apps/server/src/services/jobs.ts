@@ -84,6 +84,7 @@ export function toJob(
     imageGenerationEnabled: generationEnabled && row.image_generation_enabled,
     errorCode: row.error_code ?? null,
     errorDetail: row.error_detail ?? null,
+    copyStyle: row.brief?.copyStyle,
     thumbnails: thumbnails.map(toThumbnail),
   });
 }

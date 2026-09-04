@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { DEFAULT_STORY_ORDER, type StoryStage, type Tone } from "@gdm/shared";
+import {
+  COPY_STYLE_DEFAULT,
+  DEFAULT_STORY_ORDER,
+  type CopyStyle,
+  type StoryStage,
+  type Tone,
+} from "@gdm/shared";
 import { CreationSummary } from "@/components/new-job/CreationSummary";
+import { CopyStylePicker } from "@/components/new-job/CopyStylePicker";
 import { ImageDropzone } from "@/components/new-job/ImageDropzone";
 import { OptionEditor, type OptionDraft } from "@/components/new-job/OptionEditor";
 import { StoryOrderEditor, StoryOrderReset } from "@/components/new-job/StoryOrderEditor";
@@ -23,6 +30,7 @@ export function NewJobPage() {
   const accessToken = useAccessToken();
   const [files, setFiles] = useState<File[]>([]);
   const [tone, setTone] = useState<Tone>("warm_lifestyle");
+  const [copyStyle, setCopyStyle] = useState<CopyStyle>(COPY_STYLE_DEFAULT);
   const [stageOrder, setStageOrder] = useState<StoryStage[]>([...DEFAULT_STORY_ORDER]);
   const [excluded, setExcluded] = useState<ReadonlySet<StoryStage>>(new Set());
   const [options, setOptions] = useState<OptionDraft[]>([]);
@@ -65,6 +73,7 @@ export function NewJobPage() {
         prohibitedClaims: lines(data.get("prohibitedClaims")),
         additionalNotes: data.get("additionalNotes"),
         tone,
+        copyStyle,
         storyOrder,
       },
       files,
@@ -207,6 +216,7 @@ export function NewJobPage() {
                   <small>법적·플랫폼 정책상 피해야 할 표현을 적어주세요(최대 10개).</small>
                 </label>
                 <StylePicker value={tone} onChange={setTone} />
+                <CopyStylePicker value={copyStyle} onChange={setCopyStyle} />
                 <label className="field field--wide">
                   <span>꼭 넣고 싶은 장면·추가 메모</span>
                   <textarea
