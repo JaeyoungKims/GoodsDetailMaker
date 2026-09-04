@@ -16,6 +16,32 @@ import { useJobProgress } from "@/features/jobs/useJobProgress";
 import { jobsApi } from "@/lib/api/jobs";
 import "@/styles/job.css";
 
+/**
+ * 기획 단계 실패 안내. 크레딧 소진은 기다려도 풀리지 않으므로 재시도 안내 대신
+ * 충전 경로를 알려준다 (OpenAI 는 두 경우 모두 HTTP 429 로 준다).
+ */
+function planFailureMessage(errorCode: string | null | undefined) {
+  if (errorCode === "OPENAI_API_KEY_INVALID")
+    return "OpenAI API 키가 없거나 유효하지 않아요. 설정에서 키를 확인한 뒤 새 상세페이지를 시작해 주세요.";
+  if (errorCode === "OPENAI_QUOTA_EXHAUSTED")
+    return (
+      <>
+        OpenAI 크레딧이 모두 떨어졌어요. 기다려도 풀리지 않고 충전이 필요합니다.{" "}
+        <a
+          href="https://platform.openai.com/settings/organization/billing/overview"
+          target="_blank"
+          rel="noreferrer"
+        >
+          결제 페이지
+        </a>
+        에서 충전한 뒤 새 상세페이지를 시작해 주세요.
+      </>
+    );
+  if (errorCode === "OPENAI_RATE_LIMIT")
+    return "OpenAI 요청 한도에 걸렸어요. 잠시 뒤 새 상세페이지를 시작해 주세요.";
+  return "AI 기획 요청이 실패했어요. 잠시 뒤 새 상세페이지를 다시 시작해 주세요.";
+}
+
 export function JobPage() {
   const { jobId } = useParams();
   if (!jobId) return <Navigate to="/" replace />;
@@ -207,14 +233,13 @@ function JobView({ jobId }: { jobId: string }) {
       {job.sections.length === 0 && job.status === "failed" ? (
         <section className="planning-card planning-card--failed" role="alert">
           <strong>기획 단계에서 멈췄어요</strong>
-          <p>
-            {job.errorCode === "OPENAI_API_KEY_INVALID"
-              ? "OpenAI API 키가 없거나 유효하지 않아요. 설정에서 키를 확인한 뒤 새 상세페이지를 시작해 주세요."
-              : job.errorCode === "OPENAI_RATE_LIMIT"
-                ? "OpenAI 요청 한도에 걸렸어요. 잠시 뒤 새 상세페이지를 시작해 주세요."
-                : "AI 기획 요청이 실패했어요. 잠시 뒤 새 상세페이지를 다시 시작해 주세요."}
-          </p>
-          {job.errorCode && <small>{job.errorCode}</small>}
+          <p>{planFailureMessage(job.errorCode)}</p>
+          {job.errorCode && (
+            <small>
+              {job.errorCode}
+              {job.errorDetail ? ` — ${job.errorDetail}` : ""}
+            </small>
+          )}
           <a className="btn-primary" href="/new">
             새 상세페이지 만들기
           </a>

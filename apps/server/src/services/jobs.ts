@@ -20,6 +20,7 @@ export interface JobRow {
   reserved_bytes: number;
   expires_at: Date | null;
   error_code: string | null;
+  error_detail: string | null;
 }
 
 export interface SectionRow {
@@ -76,6 +77,7 @@ export function toJob(row: JobRow, sections: SectionRow[], generationEnabled: bo
     sections: ordered,
     imageGenerationEnabled: generationEnabled && row.image_generation_enabled,
     errorCode: row.error_code ?? null,
+    errorDetail: row.error_detail ?? null,
   });
 }
 
@@ -106,8 +108,10 @@ export async function updateJobStatus(
   jobId: string,
   status: string,
   errorCode: string | null = null,
+  errorDetail: string | null = null,
 ) {
-  await sql`update jobs set status = ${status}, error_code = ${errorCode} where id = ${jobId}`;
+  await sql`update jobs set status = ${status}, error_code = ${errorCode},
+              error_detail = ${errorDetail} where id = ${jobId}`;
 }
 
 export async function recomputeJobStatus(sql: Sql, jobId: string) {

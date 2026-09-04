@@ -114,3 +114,41 @@ describe("planSections repair loop", () => {
     });
   });
 });
+
+describe("429 분류", () => {
+  function stubFetch(status: number, body: unknown, headers: Record<string, string> = {}) {
+    return (async () =>
+      new Response(JSON.stringify(body), { status, headers })) as unknown as typeof fetch;
+  }
+
+  it("크레딧 소진은 재시도해도 소용없으므로 OPENAI_QUOTA_EXHAUSTED 로 나눈다", async () => {
+    const fetchImpl = stubFetch(429, {
+      error: {
+        type: "insufficient_quota",
+        code: "credit_balance_exhausted",
+        message: "You have no credits remaining.",
+      },
+    });
+    await expect(
+      planSections("sk-test", { brief, images: [] }, { fetchImpl }),
+    ).rejects.toMatchObject({ kind: "OPENAI_QUOTA_EXHAUSTED" });
+  });
+
+  it("분당 한도는 OPENAI_RATE_LIMIT 로 두고 retry-after 를 싣는다", async () => {
+    const fetchImpl = stubFetch(
+      429,
+      { error: { type: "rate_limit_exceeded", message: "Rate limit reached" } },
+      { "retry-after": "12" },
+    );
+    await expect(
+      planSections("sk-test", { brief, images: [] }, { fetchImpl }),
+    ).rejects.toMatchObject({ kind: "OPENAI_RATE_LIMIT", retryAfterSeconds: 12 });
+  });
+
+  it("401 은 키 문제로 분류한다", async () => {
+    const fetchImpl = stubFetch(401, { error: { message: "Incorrect API key provided" } });
+    await expect(
+      planSections("sk-test", { brief, images: [] }, { fetchImpl }),
+    ).rejects.toMatchObject({ kind: "OPENAI_API_KEY_INVALID" });
+  });
+});

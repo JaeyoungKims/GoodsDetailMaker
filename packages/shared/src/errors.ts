@@ -57,6 +57,7 @@ export const SECTION_ERROR_CODES = [
   "INPUT_OBJECT_INVALID",
   "IMAGE_CONFIG_INVALID",
   "OPENAI_RATE_LIMIT",
+  "OPENAI_QUOTA_EXHAUSTED",
   "OPENAI_PROVIDER_FAILED",
   "IMAGE_TIMEOUT",
   "IMAGE_NETWORK_FAILED",
@@ -79,6 +80,9 @@ export function sectionErrorMessage(code: SectionErrorCode | null | undefined): 
     return "API 키 설정을 확인한 뒤 다시 시도해 주세요.";
   }
   if (code === "OPENAI_RATE_LIMIT") return "요청이 몰려 잠시 멈췄어요. 조금 뒤 다시 진행됩니다.";
+  if (code === "OPENAI_QUOTA_EXHAUSTED") {
+    return "OpenAI 크레딧이 모두 떨어졌어요. 충전한 뒤 다시 시도해 주세요.";
+  }
   if (code.startsWith("INPUT_")) {
     return "상품 이미지를 처리하지 못했어요. 원본 이미지를 확인해 주세요.";
   }

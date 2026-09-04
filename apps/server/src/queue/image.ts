@@ -143,7 +143,10 @@ export async function handleImage(ctx: AppContext, msg: ImageMessage): Promise<I
     }
     if (
       err instanceof OpenAiError &&
-      (err.kind === "OPENAI_API_KEY_INVALID" || err.kind === "IMAGE_REQUEST_REJECTED")
+      (err.kind === "OPENAI_API_KEY_INVALID" ||
+        err.kind === "IMAGE_REQUEST_REJECTED" ||
+        // 크레딧 소진은 재시도해도 결제 전까지 절대 성공하지 않는다
+        err.kind === "OPENAI_QUOTA_EXHAUSTED")
     ) {
       return await fail(err.kind);
     }

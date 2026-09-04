@@ -48,6 +48,8 @@ export const jobSchema = z.object({
   imageGenerationEnabled: z.boolean(),
   /** 기획 단계 등 작업 전체가 실패했을 때의 코드 (섹션이 없을 수 있다) */
   errorCode: z.string().nullable().optional(),
+  /** 위 코드의 실제 사유. 제공자 응답 문구를 그대로 담는다. */
+  errorDetail: z.string().nullable().optional(),
 });
 export type Job = z.infer<typeof jobSchema>;
 

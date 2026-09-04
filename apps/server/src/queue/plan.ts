@@ -36,12 +36,14 @@ export async function handlePlan(ctx: AppContext, msg: PlanMessage) {
       }
     }
   } catch (err) {
-    console.error("[plan] failed", job.id, err instanceof Error ? err.message : err);
+    const detail = (err instanceof Error ? err.message : String(err)).slice(0, 500);
+    console.error("[plan] failed", job.id, detail);
     await updateJobStatus(
       sql,
       job.id,
       "failed",
       err instanceof OpenAiError ? err.kind : "PLAN_FAILED",
+      detail,
     );
   }
 }

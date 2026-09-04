@@ -25,6 +25,7 @@ export class OpenAiError extends Error {
     public readonly kind:
       | "OPENAI_API_KEY_INVALID"
       | "OPENAI_RATE_LIMIT"
+      | "OPENAI_QUOTA_EXHAUSTED"
       | "OPENAI_PROVIDER_FAILED"
       | "IMAGE_REQUEST_REJECTED"
       | "IMAGE_RESPONSE_INVALID"
@@ -42,10 +43,13 @@ async function classifyResponse(response: Response, context: string): Promise<Op
   const status = response.status;
   const retryAfter = response.headers.get("retry-after");
   const body = await response.text().catch(() => "");
-  const detail = extractErrorMessage(body) ?? body.slice(0, 300);
+  const parsed = parseErrorBody(body);
+  const detail = parsed.text;
   console.error(`[openai] ${context} failed: HTTP ${status} ${detail}`);
   if (status === 401) return new OpenAiError("OPENAI_API_KEY_INVALID", detail);
   if (status === 429) {
+    // 429 는 두 가지다. 분당 한도는 기다리면 풀리지만 크레딧 소진은 결제 전까지 풀리지 않는다.
+    if (isQuotaExhausted(parsed)) return new OpenAiError("OPENAI_QUOTA_EXHAUSTED", detail);
     const seconds = retryAfter ? Number(retryAfter) : undefined;
     return new OpenAiError("OPENAI_RATE_LIMIT", detail, Number.isFinite(seconds) ? seconds : 30);
   }
@@ -53,17 +57,35 @@ async function classifyResponse(response: Response, context: string): Promise<Op
   return new OpenAiError("OPENAI_PROVIDER_FAILED", `status ${status} ${detail}`);
 }
 
-function extractErrorMessage(body: string): string | null {
+interface ParsedError {
+  /** 로그·화면에 남길 사람이 읽는 문구 */
+  text: string;
+  type: string | null;
+  code: string | null;
+}
+
+function parseErrorBody(body: string): ParsedError {
+  const fallback = body.slice(0, 300);
   try {
     const parsed = JSON.parse(body) as {
       error?: { message?: string; code?: string; type?: string };
     };
     const e = parsed.error;
-    if (!e) return null;
-    return [e.type, e.code, e.message].filter(Boolean).join(" | ");
+    if (!e) return { text: fallback, type: null, code: null };
+    return {
+      text: [e.type, e.code, e.message].filter(Boolean).join(" | ") || fallback,
+      type: e.type ?? null,
+      code: e.code ?? null,
+    };
   } catch {
-    return null;
+    return { text: fallback, type: null, code: null };
   }
+}
+
+/** 잔액 부족(insufficient_quota / credit_balance_exhausted)은 재시도로 풀리지 않는다 */
+function isQuotaExhausted(parsed: ParsedError): boolean {
+  const marks = [parsed.type, parsed.code].filter((v): v is string => Boolean(v));
+  return marks.some((v) => v === "insufficient_quota" || v === "credit_balance_exhausted");
 }
 
 export interface PlanInput {
