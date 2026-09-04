@@ -37,12 +37,12 @@ export function NewJobPage() {
   // 옵션이 없어도 마켓에 걸 대표 이미지 한 장은 만든다
   const thumbCount = options.filter((o) => o.name.trim()).length || 1;
 
-  /** 마지막 한 단계는 뺄 수 없다 (최소 1장) */
+  /** 전부 빼면 본문 없이 썸네일만 만든다 */
   function toggleStage(stage: StoryStage) {
     setExcluded((prev) => {
       const next = new Set(prev);
       if (next.has(stage)) next.delete(stage);
-      else if (stageOrder.length - next.size > 1) next.add(stage);
+      else next.add(stage);
       return next;
     });
   }
@@ -97,7 +97,12 @@ export function NewJobPage() {
           </p>
           <h1>
             상품 하나로, <br />
-            <em>구매까지 이끄는 {sectionCount}장</em>을
+            <em>
+              {sectionCount > 0
+                ? `구매까지 이끄는 ${sectionCount}장`
+                : `마켓 썸네일 ${thumbCount}장`}
+            </em>
+            을
           </h1>
           <p className="creation-hero__lead">
             제품 이미지만 올려도 AI가 상품을 분석합니다. 아는 정보만 더하면 판매 문구와 디자인까지

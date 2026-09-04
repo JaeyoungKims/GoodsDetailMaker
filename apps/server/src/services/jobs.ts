@@ -7,7 +7,7 @@ import {
   type SectionPlan,
 } from "@gdm/shared";
 import type { Sql } from "../db/client.js";
-import { toThumbnail, type ThumbnailRow } from "./thumbnails.js";
+import { listThumbnails, toThumbnail, type ThumbnailRow } from "./thumbnails.js";
 
 export interface JobRow {
   id: string;
@@ -121,9 +121,16 @@ export async function updateJobStatus(
               error_detail = ${errorDetail} where id = ${jobId}`;
 }
 
+/**
+ * 작업 상태는 본문과 썸네일을 합쳐서 계산한다.
+ * 썸네일만 만드는 작업은 본문이 0장이라, 본문만 보면 영원히 planning 에 머문다.
+ */
 export async function recomputeJobStatus(sql: Sql, jobId: string) {
-  const sections = await listSections(sql, jobId);
-  await updateJobStatus(sql, jobId, deriveJobStatus(sections));
+  const [sections, thumbnails] = await Promise.all([
+    listSections(sql, jobId),
+    listThumbnails(sql, jobId),
+  ]);
+  await updateJobStatus(sql, jobId, deriveJobStatus([...sections, ...thumbnails]));
 }
 
 export async function insertPlannedSections(

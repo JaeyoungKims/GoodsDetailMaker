@@ -8,7 +8,7 @@ import {
 import { IMAGE_AUTO_ATTEMPT_MAX, type SectionErrorCode, type ThumbnailMessage } from "@gdm/shared";
 import type { AppContext } from "../context.js";
 import { claimThumbnailSlot, decideDispatch } from "../services/gate.js";
-import { findJob } from "../services/jobs.js";
+import { findJob, recomputeJobStatus } from "../services/jobs.js";
 import {
   getSettings,
   markRateLimited,
@@ -43,6 +43,7 @@ export async function handleThumbnail(
   let lastDetail: string | null = null;
   const fail = async (code: SectionErrorCode): Promise<ImageOutcome> => {
     await patch({ status: "failed", error_code: code, error_detail: lastDetail });
+    await recomputeJobStatus(sql, msg.jobId);
     return { kind: "failed", code };
   };
 
@@ -121,6 +122,7 @@ export async function handleThumbnail(
       error_code: null,
       error_detail: null,
     });
+    await recomputeJobStatus(sql, msg.jobId);
     return { kind: "done" };
   } catch (err) {
     const detail = (err instanceof Error ? err.message : String(err)).slice(0, 500);

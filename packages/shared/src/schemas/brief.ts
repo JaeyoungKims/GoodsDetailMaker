@@ -6,10 +6,12 @@ import { LEGACY_TONES, TONES } from "../tone.js";
 const line = (max: number) => z.string().trim().min(1).max(max);
 const optionalText = (max: number) => z.string().trim().max(max).default("");
 
-/** storyOrder: 13단계 중 원하는 것만 1~13개, 중복 없이. 순서가 곧 장 순서다. */
+/**
+ * storyOrder: 13단계 중 원하는 것만 0~13개, 중복 없이. 순서가 곧 장 순서다.
+ * 비우면 본문 없이 마켓 썸네일만 만든다.
+ */
 export const storyOrderSchema = z
   .array(z.enum(STORY_STAGES))
-  .min(1)
   .max(STORY_STAGES.length)
   .superRefine((order, ctx) => {
     if (new Set(order).size !== order.length) {

@@ -10,7 +10,11 @@ interface Props {
   thumbCount: number;
 }
 
-function buttonLabel(phase: CreateJobState["phase"], sectionCount: number): string {
+function buttonLabel(
+  phase: CreateJobState["phase"],
+  sectionCount: number,
+  thumbCount: number,
+): string {
   switch (phase) {
     case "submitting":
       return "처리 중…";
@@ -19,7 +23,9 @@ function buttonLabel(phase: CreateJobState["phase"], sectionCount: number): stri
     case "resumable":
       return "이어서 시도";
     default:
-      return `${sectionCount}장 생성 시작`;
+      return sectionCount > 0
+        ? `${sectionCount + thumbCount}장 생성 시작`
+        : `썸네일 ${thumbCount}장 만들기`;
   }
 }
 
@@ -29,11 +35,15 @@ export function CreationSummary({ state, disabled, sectionCount, thumbCount }: P
     <aside className="creation-summary">
       <div className="creation-summary__card">
         <p className="page-eyebrow">
-          <span>{sectionCount}</span> OUTPUT
+          <span>{sectionCount + thumbCount}</span> OUTPUT
         </p>
-        <h2>{sectionCount}장 · 구매 흐름 · 가성비</h2>
+        <h2>
+          {sectionCount > 0
+            ? `본문 ${sectionCount}장 · 썸네일 ${thumbCount}장`
+            : `마켓 썸네일 ${thumbCount}장`}
+        </h2>
         <div className="summary-frames" aria-hidden="true">
-          {Array.from({ length: sectionCount }, (_, i) => (
+          {Array.from({ length: sectionCount + thumbCount }, (_, i) => (
             <span key={i}>{String(i + 1).padStart(2, "0")}</span>
           ))}
         </div>
@@ -60,7 +70,7 @@ export function CreationSummary({ state, disabled, sectionCount, thumbCount }: P
           </div>
           <div>
             <dt>설득 순서</dt>
-            <dd>내가 정한 {sectionCount}단계</dd>
+            <dd>{sectionCount > 0 ? `내가 정한 ${sectionCount}단계` : "본문 없이 썸네일만"}</dd>
           </div>
           <div>
             <dt>장면 구성</dt>
@@ -79,7 +89,7 @@ export function CreationSummary({ state, disabled, sectionCount, thumbCount }: P
           </p>
         </div>
         <button className="create-button" type="submit" disabled={disabled}>
-          <span>{buttonLabel(state.phase, sectionCount)}</span>
+          <span>{buttonLabel(state.phase, sectionCount, thumbCount)}</span>
           <b aria-hidden="true">→</b>
         </button>
         {state.message && (

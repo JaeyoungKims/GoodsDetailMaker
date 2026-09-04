@@ -170,9 +170,12 @@ export const jobRoutes = new Hono<HonoEnv>()
     const thumbnails = await listThumbnails(sql, job.id);
     const reserved = (job.section_count + thumbnails.length) * RAW_RESERVE_BYTES_PER_SECTION;
     await assertStorageQuota(sql, job.user_id, reserved);
-    await sql`update jobs set status = 'queued', reserved_bytes = ${reserved} where id = ${job.id}`;
+    // 본문이 없으면 기획할 것이 없다. 바로 생성 단계로 둔다.
+    const nextStatus = job.section_count > 0 ? "queued" : "generating";
+    await sql`update jobs set status = ${nextStatus}, reserved_bytes = ${reserved} where id = ${job.id}`;
     try {
-      await enqueue(c.get("ctx"), { kind: "plan", userId: job.user_id, jobId: job.id });
+      if (job.section_count > 0)
+        await enqueue(c.get("ctx"), { kind: "plan", userId: job.user_id, jobId: job.id });
       // 썸네일은 기획 결과에 기대지 않으므로 바로 넣는다. 슬롯은 게이트가 나눠 준다.
       if (c.get("ctx").config.IMAGE_GENERATION_ENABLED) {
         for (const t of thumbnails) {

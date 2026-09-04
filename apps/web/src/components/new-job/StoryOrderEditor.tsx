@@ -54,7 +54,7 @@ export function StoryOrderEditor({ order, excluded, onChange, onToggle }: Props)
       <div className="story-order-intro">
         <p>
           구매까지 이어지는 설득 순서예요. 필요한 단계만 골라 순서를 바꿀 수 있고, 고른 단계마다 한
-          장의 이미지가 만들어집니다.
+          장의 이미지가 만들어집니다. 전부 빼면 본문 없이 마켓 썸네일만 만들어요.
         </p>
         <span>{pickedCount}단계 선택</span>
       </div>
@@ -77,7 +77,6 @@ export function StoryOrderEditor({ order, excluded, onChange, onToggle }: Props)
                 type="checkbox"
                 className="story-order-pick"
                 checked={picked}
-                disabled={picked && pickedCount === 1}
                 onChange={() => onToggle(stage)}
                 aria-label={`${STORY_STAGE_LABELS[stage]} 사용`}
               />
@@ -111,9 +110,9 @@ export function StoryOrderEditor({ order, excluded, onChange, onToggle }: Props)
           );
         })}
       </ol>
-      {pickedCount === 1 && (
+      {pickedCount === 0 && (
         <p className="story-order-hint" role="status">
-          최소 한 단계는 있어야 해요.
+          본문은 만들지 않고 마켓 썸네일만 만들어요.
         </p>
       )}
     </>

@@ -43,8 +43,8 @@ describe("productBriefSchema", () => {
     expect(storyOrderSchema.safeParse(["HERO"]).success).toBe(true);
   });
 
-  it("하나도 고르지 않으면 거부한다", () => {
-    expect(storyOrderSchema.safeParse([]).success).toBe(false);
+  it("하나도 고르지 않으면 본문 없이 썸네일만 만드는 작업이 된다", () => {
+    expect(storyOrderSchema.safeParse([]).success).toBe(true);
   });
 });
 
