@@ -49,7 +49,9 @@
       (2026-09-04, 작업 `46b6e8b1`. role 이 HERO / BENEFIT_A / PRODUCT_INFO 로 매핑대로 나왔고
       raw 3개 파일 저장, status=completed)
 - [x] 기존 13장 작업(`4f653ecf`)이 그대로 열린다 — role 이 옛 슬롯 순서인데도 13장 completed 로 응답
-- [ ] 브라우저에서 미리보기·JPG·ZIP·세로 합본 확인 (Canvas 합성 경로. 로그인한 브라우저 필요)
+- [x] 브라우저에서 미리보기·ZIP·세로 합본 확인 (2026-09-04)
+      13장 작업 ZIP 은 13개 파일이 `01-hero.jpg` … `13-product_info.jpg` 로 나온다.
+      옛 role 순서(`03-solution.jpg`)가 그대로 유지돼 과거 작업이 깨지지 않는다.
 
 ## B2. 옵션별 썸네일 + 메인 썸네일 (완료 2026-09-04)
 
