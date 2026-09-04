@@ -1,11 +1,10 @@
-import { SECTION_COUNT, SECTION_ROLES } from "@gdm/shared";
+import type { SectionRole } from "@gdm/shared";
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 156 * 1024 * 1024;
 
-export function sectionFileName(index: number): string {
-  const role = SECTION_ROLES[index - 1];
-  if (!role) throw new Error("SECTION_INDEX_INVALID");
+/** role 은 그 자리의 설득 단계가 정하므로 index 만으로는 알 수 없다 */
+export function sectionFileName(index: number, role: SectionRole): string {
   return `${String(index).padStart(2, "0")}-${role.toLowerCase()}.jpg`;
 }
 
@@ -21,9 +20,9 @@ export function jobFilePrefix(productName: string, jobId: string): string {
 }
 
 export const fileNames = {
-  section: (productName: string, jobId: string, index: number) =>
-    `${jobFilePrefix(productName, jobId)}-${sectionFileName(index)}`,
-  zip: (productName: string, jobId: string, count = SECTION_COUNT) =>
+  section: (productName: string, jobId: string, index: number, role: SectionRole) =>
+    `${jobFilePrefix(productName, jobId)}-${sectionFileName(index, role)}`,
+  zip: (productName: string, jobId: string, count: number) =>
     `${jobFilePrefix(productName, jobId)}-${count}장.zip`,
   vertical: (productName: string, jobId: string) =>
     `${jobFilePrefix(productName, jobId)}-세로합본.jpg`,

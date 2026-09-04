@@ -2,8 +2,8 @@ import {
   BULLETS_MAX,
   BULLET_MAX,
   HEADLINE_MAX,
-  SECTION_COUNT,
   SECTION_ROLES,
+  STAGE_TO_ROLE,
   STORY_STAGE_LABELS,
   SUBHEADLINE_MAX,
   TONE_META,
@@ -129,17 +129,24 @@ export function normalizeTone(tone: AnyTone): Tone {
     : LEGACY_TONE_MAP[tone as Exclude<AnyTone, Tone>];
 }
 
-export function buildSystemPrompt(): string {
-  const roles = SECTION_ROLES.map((r, i) => `${i + 1}. ${r} — ${ROLE_GUIDE[r]}`).join("\n");
+export function buildSystemPrompt(storyOrder: readonly StoryStage[]): string {
+  const count = storyOrder.length;
+  const slots = storyOrder
+    .map((stage, i) => {
+      const role = STAGE_TO_ROLE[stage];
+      return `${i + 1}. ${stage} (${STORY_STAGE_LABELS[stage]}) → role ${role} — ${ROLE_GUIDE[role]}`;
+    })
+    .join("\n");
   return `당신은 한국 이커머스(스마트스토어·쿠팡) 상세페이지를 기획하는 시니어 카피라이터 겸 아트디렉터다.
-상품 브리프(JSON)와 제품 사진을 보고 구매 퍼널 ${SECTION_COUNT}장의 설계를 JSON 으로만 출력한다. 설명, 마크다운, 코드펜스는 쓰지 않는다.
+상품 브리프(JSON)와 제품 사진을 보고 구매 퍼널 ${count}장의 설계를 JSON 으로만 출력한다. 설명, 마크다운, 코드펜스는 쓰지 않는다.
 
 ## 출력 계약
-- sections 는 정확히 ${SECTION_COUNT}개. index 는 1..${SECTION_COUNT} 순서대로. role 은 아래 슬롯 순서로 고정한다.
-${roles}
-- 사용자 메시지의 storyOrder 에서 i번째 단계가 index i 의 "메시지 목표" 다. role 은 장면 구도, storyOrder 는 무엇을 설득할지를 정한다. 두 축을 모두 만족시켜라.
+- sections 는 정확히 ${count}개. index 는 1..${count} 순서대로. 각 자리의 설득 단계와 role 은 아래로 고정한다.
+${slots}
+- 설득 단계는 그 장에서 무엇을 설득할지, role 은 어떤 장면 구도로 보여줄지를 정한다. 두 축을 모두 만족시켜라.
+- 사용자가 고르지 않은 단계는 이 작업에 없다. 위 목록에 없는 단계의 내용을 끼워 넣지 마라.
 - headline ≤ ${HEADLINE_MAX}자, subheadline ≤ ${SUBHEADLINE_MAX}자(비워도 됨), bullets ≤ ${BULLETS_MAX}개·각 ≤ ${BULLET_MAX}자. 모두 자연스러운 한국어 구어체, 마침표 없이, 이모지 없이.
-- visualDirection: ${SECTION_COUNT}장 전체에 공통으로 적용할 디자인 시스템을 한 문단(≤400자)으로 쓰고, 모든 섹션에 **완전히 같은 문자열**을 넣는다.
+- visualDirection: ${count}장 전체에 공통으로 적용할 디자인 시스템을 한 문단(≤400자)으로 쓰고, 모든 섹션에 **완전히 같은 문자열**을 넣는다.
 - imagePrompt: 영어 60~140단어. 텍스트·글자·로고·워터마크·UI 요소가 없는 장면만 묘사한다(문구는 브라우저가 얹는다). 2:3 세로 구도. 반드시 "no text, no letters, no logos, no watermark" 를 포함한다.
 - copyPlacement: 카피가 제품 핵심부를 가리지 않는 위치. 제품이 아래쪽이면 top, 위쪽이면 bottom, 좌우로 치우치면 center. 장면 묘사에 그 영역을 비우라는 지시를 포함한다.
 - renderMode: 기본 "browser_overlay". 카피가 이미지 안에 그래픽으로 녹아야만 하는 장(예: 비교표)에 한해 "image_model_text" 를 쓸 수 있으나, 이 경우에도 한글 오탈자 위험이 있으므로 정말 필요할 때만.
@@ -148,11 +155,11 @@ ${roles}
 1. 브리프에 없는 가격·할인·기간·인증·수상·후기·수치·비교 우위는 만들지 않는다. 근거(evidence)에 있는 것만 숫자로 쓴다.
 2. prohibitedClaims 의 표현과 그 유사 표현을 쓰지 않는다. 의료·치료 효능, "100%", "최고", "1위", 경쟁사 이름은 근거가 있어도 피한다.
 3. 제품 외형·색상·구성은 제공된 사진과 일치시킨다. 사진에 없는 부속품·색상을 상상하지 않는다. 첫 번째 사진이 주력 제품이다.
-4. 스타일(tone)의 색·조명·소품 방향을 ${SECTION_COUNT}장 전체에 일관되게 유지하되, 장마다 장면과 구도는 달라야 한다. 같은 구도를 반복하지 않는다.
+4. 스타일(tone)의 색·조명·소품 방향을 ${count}장 전체에 일관되게 유지하되, 장마다 장면과 구도는 달라야 한다. 같은 구도를 반복하지 않는다.
 5. 후기·증정·가격 정보가 없으면 각 단계의 대체 규칙을 따른다. 해당 장을 비우거나 건너뛰지 않는다.
 
-## 단계별 지침 (storyOrder 의 각 단계)
-${STORY_STAGES_TEXT()}
+## 단계별 지침 (이 작업에서 쓰는 단계만)
+${stageGuideText(storyOrder)}
 
 ## 스타일별 시각 방향
 ${TONES.map((t) => `- ${t} (${TONE_META[t].label}): ${TONE_GUIDE[t]}`).join("\n")}
@@ -161,16 +168,27 @@ ${TONES.map((t) => `- ${t} (${TONE_META[t].label}): ${TONE_GUIDE[t]}`).join("\n"
 - headline 은 혜택 중심, 고객 언어. 기능 이름보다 "그래서 무엇이 좋아지는지".
 - subheadline 은 headline 을 뒷받침하는 한 문장. 없어도 되면 빈 문자열.
 - bullets 는 명사형 또는 짧은 구. 근거가 있을 때만 숫자를 넣는다.
-- 13장을 위에서 아래로 읽었을 때 한 편의 이야기가 되도록 앞 장의 내용을 이어받는다.`;
+- ${count}장을 위에서 아래로 읽었을 때 한 편의 이야기가 되도록 앞 장의 내용을 이어받는다.`;
 }
 
-function STORY_STAGES_TEXT(): string {
-  return (Object.keys(STAGE_GUIDE) as StoryStage[])
+function stageGuideText(storyOrder: readonly StoryStage[]): string {
+  return storyOrder
     .map(
       (s) =>
         `- ${s} (${STORY_STAGE_LABELS[s]}): ${STAGE_GUIDE[s].goal} / 정보 없을 때: ${STAGE_GUIDE[s].fallback}`,
     )
     .join("\n");
+}
+
+/** 핵심 장점을 증명하는 단계들. 사용자가 이 중 무엇을 골랐는지에 따라 배정 안내가 달라진다. */
+const BENEFIT_STAGES: readonly StoryStage[] = ["GAP", "GUIDE", "CORE_REASON"];
+
+/** 근거가 없을 때 특별히 조심해야 하는 단계는 그 단계를 실제로 골랐을 때만 짚어 준다. */
+function noEvidenceNote(storyOrder: readonly StoryStage[]): string {
+  const notes: string[] = [];
+  if (storyOrder.includes("SUCCESS")) notes.push("SUCCESS 는 '편집용 후기 초안' 규칙");
+  if (storyOrder.includes("OFFER")) notes.push("OFFER 는 숫자 없이");
+  return notes.length ? `. ${notes.join(", ")}` : "";
 }
 
 export interface BriefContext {
@@ -190,15 +208,19 @@ export function buildUserPrompt({ brief, imageCount }: BriefContext): string {
   lines.push(
     `- 주요 고객: ${brief.targetCustomer || "(미입력 — 사진에서 확인되는 사용 맥락으로 보수적으로 설정)"}`,
   );
+  const benefitStages = brief.storyOrder.filter((s) => BENEFIT_STAGES.includes(s));
+  const benefitTarget = benefitStages.length
+    ? `이 순서로 ${benefitStages.join("→")} 에 배정`
+    : "고른 단계들에 나눠 배정";
   lines.push(
     brief.coreBenefits.length
-      ? `- 핵심 장점 (이 순서로 GAP→GUIDE→CORE_REASON 에 배정):\n${brief.coreBenefits.map((b, i) => `  ${i + 1}. ${b}`).join("\n")}`
+      ? `- 핵심 장점 (${benefitTarget}):\n${brief.coreBenefits.map((b, i) => `  ${i + 1}. ${b}`).join("\n")}`
       : "- 핵심 장점: (미입력 — 사진에서 보이는 특징만 사용, 성능 수치 금지)",
   );
   lines.push(
     brief.evidence.length
       ? `- 사용 가능한 근거 (이것만 숫자·인증으로 인용 가능):\n${brief.evidence.map((e) => `  · ${e}`).join("\n")}`
-      : "- 사용 가능한 근거: (없음 — 어떤 수치·인증·후기도 쓰지 말 것. SUCCESS 는 '편집용 후기 초안' 규칙, OFFER 는 숫자 없이)",
+      : `- 사용 가능한 근거: (없음 — 어떤 수치·인증·후기도 쓰지 말 것${noEvidenceNote(brief.storyOrder)})`,
   );
   lines.push(
     brief.prohibitedClaims.length
@@ -209,9 +231,9 @@ export function buildUserPrompt({ brief, imageCount }: BriefContext): string {
   if (brief.additionalNotes)
     lines.push(`- 추가 메모 (장면 요청 등, 사실 주장으로 쓰지 말 것): ${brief.additionalNotes}`);
   lines.push("");
-  lines.push("## storyOrder (index i 의 메시지 목표)");
+  lines.push(`## storyOrder (${brief.storyOrder.length}장, 각 장의 메시지 목표)`);
   brief.storyOrder.forEach((stage, i) => {
-    lines.push(`${i + 1}. ${stage} — ${STORY_STAGE_LABELS[stage]} → role 슬롯 ${SECTION_ROLES[i]}`);
+    lines.push(`${i + 1}. ${stage} — ${STORY_STAGE_LABELS[stage]} → role ${STAGE_TO_ROLE[stage]}`);
   });
   lines.push("");
   lines.push(`## 제품 사진: ${imageCount}장 첨부. 1번이 주력 제품. 외형·색상은 사진을 따를 것.`);

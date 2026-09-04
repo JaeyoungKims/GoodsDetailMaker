@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_STORY_ORDER, SECTION_ROLES, productBriefSchema } from "@gdm/shared";
+import {
+  DEFAULT_STORY_ORDER,
+  STAGE_TO_ROLE,
+  productBriefSchema,
+  type StoryStage,
+} from "@gdm/shared";
 import { buildSystemPrompt, buildUserPrompt, normalizeTone } from "./planPrompt.js";
 import { parsePlanText, planSections } from "./openai.js";
 
@@ -11,9 +16,13 @@ const brief = productBriefSchema.parse({
   tone: "warm_lifestyle",
 });
 
-const validSections = SECTION_ROLES.map((role, i) => ({
+const order = [...DEFAULT_STORY_ORDER];
+/** 일부 단계만 고른 작업 (B1) */
+const shortOrder: StoryStage[] = ["HERO", "SUCCESS", "PRODUCT_INFO"];
+
+const validSections = order.map((stage, i) => ({
   index: i + 1,
-  role,
+  role: STAGE_TO_ROLE[stage],
   headline: `헤드라인 ${i + 1}`,
   subheadline: "",
   bullets: ["분사량 300ml/h", ""],
@@ -25,17 +34,25 @@ const validSections = SECTION_ROLES.map((role, i) => ({
 }));
 
 describe("prompt builders", () => {
-  it("시스템 프롬프트에 role 슬롯 13개와 절대 규칙이 들어간다", () => {
-    const p = buildSystemPrompt();
-    for (const role of SECTION_ROLES) expect(p).toContain(role);
+  it("시스템 프롬프트에 고른 단계의 role 과 절대 규칙이 들어간다", () => {
+    const p = buildSystemPrompt(order);
+    for (const stage of order) expect(p).toContain(STAGE_TO_ROLE[stage]);
     expect(p).toContain("절대 규칙");
     expect(p).toContain("no text, no letters, no logos, no watermark");
   });
 
-  it("사용자 프롬프트는 storyOrder 를 index→role 로 매핑해 나열한다", () => {
+  it("고른 단계 수만큼만 요구하고, 빼둔 단계는 지침에서 사라진다", () => {
+    const p = buildSystemPrompt(shortOrder);
+    expect(p).toContain("sections 는 정확히 3개");
+    expect(p).toContain("구매 퍼널 3장");
+    expect(p).toContain("SUCCESS");
+    expect(p).not.toContain("BENEFIT_ARCHIVE");
+  });
+
+  it("사용자 프롬프트는 storyOrder 를 단계→role 로 매핑해 나열한다", () => {
     const p = buildUserPrompt({ brief, imageCount: 2 });
     expect(p).toContain(`1. ${DEFAULT_STORY_ORDER[0]}`);
-    expect(p).toContain(`→ role 슬롯 ${SECTION_ROLES[12]}`);
+    expect(p).toContain(`→ role ${STAGE_TO_ROLE[DEFAULT_STORY_ORDER[12]!]}`);
     expect(p).toContain("제품 사진: 2장 첨부");
     expect(p).toContain("자사 테스트 기준 28dB");
     expect(p).toContain("완치");
@@ -57,16 +74,50 @@ describe("prompt builders", () => {
 describe("parsePlanText", () => {
   it("코드펜스·공백·빈 불릿을 정리하고 통과시킨다", () => {
     const text = "```json\n" + JSON.stringify({ sections: validSections }) + "\n```";
-    const r = parsePlanText(text);
+    const r = parsePlanText(text, order);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.sections[0]!.bullets).toEqual(["분사량 300ml/h"]);
   });
 
   it("검증 실패는 경로가 붙은 오류 목록으로 돌려준다", () => {
     const bad = validSections.map((s, i) => (i === 2 ? { ...s, headline: "가".repeat(40) } : s));
-    const r = parsePlanText(JSON.stringify({ sections: bad }));
+    const r = parsePlanText(JSON.stringify({ sections: bad }), order);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.issues[0]).toMatch(/^sections\.2\.headline/);
+  });
+});
+
+describe("부분 선택", () => {
+  it("고른 단계가 3개면 3개짜리 결과만 통과한다", () => {
+    const three = shortOrder.map((stage, i) => ({
+      ...validSections[i]!,
+      index: i + 1,
+      role: STAGE_TO_ROLE[stage],
+    }));
+    expect(parsePlanText(JSON.stringify({ sections: three }), shortOrder).ok).toBe(true);
+    expect(parsePlanText(JSON.stringify({ sections: validSections }), shortOrder).ok).toBe(false);
+  });
+
+  it("3단계 브리프로 기획하면 섹션 3개를 돌려준다", async () => {
+    const shortBrief = productBriefSchema.parse({
+      tone: "warm_lifestyle",
+      storyOrder: shortOrder,
+    });
+    const three = shortOrder.map((stage, i) => ({
+      ...validSections[i]!,
+      index: i + 1,
+      role: STAGE_TO_ROLE[stage],
+    }));
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ output_text: JSON.stringify({ sections: three }) }), {
+        status: 200,
+      })) as typeof fetch;
+    const sections = await planSections(
+      "sk-test",
+      { brief: shortBrief, images: [] },
+      { fetchImpl },
+    );
+    expect(sections).toHaveLength(3);
   });
 });
 

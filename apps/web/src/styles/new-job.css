@@ -424,7 +424,7 @@
 }
 .story-order-list li {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   min-height: 56px;
@@ -494,6 +494,34 @@
 }
 .story-order-actions button:disabled {
   opacity: 0.3;
+}
+.story-order-pick {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.story-order-pick:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.story-order-list li.is-excluded {
+  border-style: dashed;
+  background: var(--surface-2);
+}
+.story-order-list li.is-excluded strong,
+.story-order-list li.is-excluded small {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.story-order-list li.is-excluded > b {
+  background: transparent;
+  color: var(--line-strong);
+}
+.story-order-hint {
+  margin: -12px 22px 18px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* 요약 카드 */

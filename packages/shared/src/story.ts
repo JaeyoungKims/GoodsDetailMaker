@@ -71,6 +71,26 @@ export const STORY_STAGE_LABELS: Record<StoryStage, string> = {
   PRODUCT_INFO: "13. 제품 정보",
 };
 
+/**
+ * 설득 단계 → role 매핑. 사용자가 단계를 고르고 재배열하므로 장면 구도(role)도 단계를 따라간다.
+ * index i 의 role = STAGE_TO_ROLE[storyOrder[i]].
+ */
+export const STAGE_TO_ROLE: Record<StoryStage, SectionRole> = {
+  HERO: "HERO",
+  PROBLEM: "PROBLEM",
+  GAP: "BENEFIT_A",
+  GUIDE: "BENEFIT_B",
+  CORE_REASON: "SOLUTION",
+  PLAN: "DETAIL",
+  OFFER: "CTA",
+  SUCCESS: "REVIEW",
+  LOSS: "COMPARISON",
+  CLOSING: "GIFT",
+  SITUATIONS: "USAGE",
+  BENEFIT_ARCHIVE: "TRUST",
+  PRODUCT_INFO: "PRODUCT_INFO",
+};
+
 export const STORY_STAGE_DESCRIPTIONS: Record<StoryStage, string> = {
   HERO: "핵심 소구점 하나와 제품 전체 모습을 깨끗하게 각인",
   PROBLEM: "고객이 실제 생활에서 겪는 불편과 욕구를 구체화",

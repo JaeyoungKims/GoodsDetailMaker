@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { DEFAULT_STORY_ORDER, SECTION_COUNT, type StoryStage, type Tone } from "@gdm/shared";
+import { DEFAULT_STORY_ORDER, type StoryStage, type Tone } from "@gdm/shared";
 import { CreationSummary } from "@/components/new-job/CreationSummary";
 import { ImageDropzone } from "@/components/new-job/ImageDropzone";
 import { StoryOrderEditor, StoryOrderReset } from "@/components/new-job/StoryOrderEditor";
@@ -22,13 +22,31 @@ export function NewJobPage() {
   const accessToken = useAccessToken();
   const [files, setFiles] = useState<File[]>([]);
   const [tone, setTone] = useState<Tone>("warm_lifestyle");
-  const [storyOrder, setStoryOrder] = useState<StoryStage[]>([...DEFAULT_STORY_ORDER]);
+  const [stageOrder, setStageOrder] = useState<StoryStage[]>([...DEFAULT_STORY_ORDER]);
+  const [excluded, setExcluded] = useState<ReadonlySet<StoryStage>>(new Set());
+  const storyOrder = stageOrder.filter((stage) => !excluded.has(stage));
   const { state, submit } = useCreateJob({
     accessToken,
     onStarted: (jobId) => navigate(`/jobs/${jobId}`),
   });
 
   const locked = state.phase === "submitting" || state.phase === "done";
+  const sectionCount = storyOrder.length;
+
+  /** 마지막 한 단계는 뺄 수 없다 (최소 1장) */
+  function toggleStage(stage: StoryStage) {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(stage)) next.delete(stage);
+      else if (stageOrder.length - next.size > 1) next.add(stage);
+      return next;
+    });
+  }
+
+  function resetStages(order: StoryStage[]) {
+    setStageOrder(order);
+    setExcluded(new Set());
+  }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,11 +92,11 @@ export function NewJobPage() {
           </p>
           <h1>
             상품 하나로, <br />
-            <em>구매까지 이끄는 {SECTION_COUNT}장</em>을
+            <em>구매까지 이끄는 {sectionCount}장</em>을
           </h1>
           <p className="creation-hero__lead">
             제품 이미지만 올려도 AI가 상품을 분석합니다. 아는 정보만 더하면 판매 문구와 디자인까지
-            장별로 기획하고, 콜라주가 아닌 전환 퍼널 완성 이미지 {SECTION_COUNT}장으로 각각
+            장별로 기획하고, 콜라주가 아닌 전환 퍼널 완성 이미지 {sectionCount}장으로 각각
             생성합니다.
           </p>
         </div>
@@ -88,7 +106,7 @@ export function NewJobPage() {
             <span>한 번만 입력</span>
           </li>
           <li>
-            <strong>{SECTION_COUNT}</strong>
+            <strong>{sectionCount}</strong>
             <span>각 장 독립 생성</span>
           </li>
           <li>
@@ -213,14 +231,19 @@ export function NewJobPage() {
                   <p>STORY FLOW</p>
                   <h2 id="story-section-title">추천 설득 흐름</h2>
                 </div>
-                <StoryOrderReset onReset={setStoryOrder} />
+                <StoryOrderReset onReset={resetStages} />
               </header>
-              <StoryOrderEditor order={storyOrder} onChange={setStoryOrder} />
+              <StoryOrderEditor
+                order={stageOrder}
+                excluded={excluded}
+                onChange={setStageOrder}
+                onToggle={toggleStage}
+              />
             </section>
           </fieldset>
         </div>
 
-        <CreationSummary state={state} disabled={locked} />
+        <CreationSummary state={state} disabled={locked} sectionCount={sectionCount} />
       </form>
     </main>
   );

@@ -5,15 +5,16 @@ import { LEGACY_TONES, TONES } from "../tone.js";
 const line = (max: number) => z.string().trim().min(1).max(max);
 const optionalText = (max: number) => z.string().trim().max(max).default("");
 
-/** storyOrder: 13단계가 정확히 한 번씩, 순서만 다르게 */
+/** storyOrder: 13단계 중 원하는 것만 1~13개, 중복 없이. 순서가 곧 장 순서다. */
 export const storyOrderSchema = z
   .array(z.enum(STORY_STAGES))
-  .length(STORY_STAGES.length)
+  .min(1)
+  .max(STORY_STAGES.length)
   .superRefine((order, ctx) => {
-    if (new Set(order).size !== STORY_STAGES.length) {
+    if (new Set(order).size !== order.length) {
       ctx.addIssue({
         code: "custom",
-        message: "Story order must contain every persuasion stage exactly once.",
+        message: "Story order must not repeat a persuasion stage.",
       });
     }
   });

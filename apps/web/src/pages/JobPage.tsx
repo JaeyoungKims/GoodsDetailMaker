@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router";
-import {
-  SECTION_COUNT,
-  STORY_STAGE_LABELS,
-  type Section,
-  type SectionCopyUpdate,
-} from "@gdm/shared";
+import { STORY_STAGE_LABELS, type Section, type SectionCopyUpdate } from "@gdm/shared";
 import { ExportPanel, type ExportKind } from "@/components/job/ExportPanel";
 import { JobHero } from "@/components/job/JobHero";
 import { SectionCard } from "@/components/job/SectionCard";
@@ -139,7 +134,11 @@ function JobView({ jobId }: { jobId: string }) {
         kind === "zip"
           ? await (
               await import("@/features/export/exportZip")
-            ).exportZip(blobs, { signal: controller.signal })
+            ).exportZip(
+              blobs,
+              job.sections.map((s) => s.role),
+              { signal: controller.signal },
+            )
           : await (
               await import("@/features/export/exportVertical")
             ).exportVertical(blobs, { signal: controller.signal });
@@ -174,7 +173,7 @@ function JobView({ jobId }: { jobId: string }) {
   if (loading && !job) {
     return (
       <main className="job-page job-page--center">
-        <p role="status">{SECTION_COUNT}장의 진행 상황을 불러오는 중…</p>
+        <p role="status">진행 상황을 불러오는 중…</p>
       </main>
     );
   }
@@ -188,7 +187,7 @@ function JobView({ jobId }: { jobId: string }) {
     );
   }
 
-  const total = job.sections.length || SECTION_COUNT;
+  const total = job.sections.length || job.storyOrder.length;
   const completed = job.sections.filter((s) => s.status === "completed").length;
   const failed = job.sections.filter((s) => s.status === "failed").length;
   const exportReady = cache.current.orderedCurrent(jobId, job.sections) !== null;
@@ -249,7 +248,7 @@ function JobView({ jobId }: { jobId: string }) {
           <span>1</span>
           <span>2</span>
           <span>3</span>
-          <strong>{SECTION_COUNT}단계 전환 퍼널을 기획하고 있어요</strong>
+          <strong>{job.storyOrder.length}단계 전환 퍼널을 기획하고 있어요</strong>
           <p>선택한 설득 흐름대로 기획한 뒤, 각 이미지를 따로 생성합니다.</p>
         </section>
       ) : (
@@ -264,7 +263,12 @@ function JobView({ jobId }: { jobId: string }) {
                 accessToken={token}
                 stageLabel={stage ? STORY_STAGE_LABELS[stage] : undefined}
                 cachedBlob={cache.current.get(jobId, section.index, section.copyVersion)}
-                downloadName={fileNames.section(job.productName, jobId, section.index)}
+                downloadName={fileNames.section(
+                  job.productName,
+                  jobId,
+                  section.index,
+                  section.role,
+                )}
                 onPreviewReady={onPreviewReady}
                 onRetry={onRetry}
                 onCopySave={onCopySave}

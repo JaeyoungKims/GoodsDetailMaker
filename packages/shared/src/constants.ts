@@ -4,10 +4,8 @@ export const IMAGE_HEIGHT = 1536;
 export const IMAGE_MODEL = "gpt-image-2";
 export const IMAGE_QUALITY = "medium";
 
-/** 한 작업이 만드는 이미지 장 수 */
+/** 한 작업이 만들 수 있는 최대 장 수. 실제 장 수는 사용자가 고른 설득 단계 수(job.section_count)다. */
 export const SECTION_COUNT = 13;
-/** 레거시 호환: 10장 작업도 읽을 수 있어야 한다 */
-export const LEGACY_SECTION_COUNT = 10;
 
 /** 입력 이미지 한도 */
 export const INPUT_IMAGE_MIN = 1;

@@ -1,12 +1,14 @@
-import { IMAGE_HEIGHT, IMAGE_WIDTH, SECTION_COUNT } from "@gdm/shared";
+import { IMAGE_HEIGHT, IMAGE_WIDTH } from "@gdm/shared";
 import type { CreateJobState } from "@/features/jobs/useCreateJob";
 
 interface Props {
   state: CreateJobState;
   disabled: boolean;
+  /** 사용자가 고른 설득 단계 수 = 만들 장 수 */
+  sectionCount: number;
 }
 
-function buttonLabel(phase: CreateJobState["phase"]): string {
+function buttonLabel(phase: CreateJobState["phase"], sectionCount: number): string {
   switch (phase) {
     case "submitting":
       return "처리 중…";
@@ -15,21 +17,21 @@ function buttonLabel(phase: CreateJobState["phase"]): string {
     case "resumable":
       return "이어서 시도";
     default:
-      return `${SECTION_COUNT}장 생성 시작`;
+      return `${sectionCount}장 생성 시작`;
   }
 }
 
 /** 우측 고정 요약 카드 + 제출 버튼 */
-export function CreationSummary({ state, disabled }: Props) {
+export function CreationSummary({ state, disabled, sectionCount }: Props) {
   return (
     <aside className="creation-summary">
       <div className="creation-summary__card">
         <p className="page-eyebrow">
-          <span>{SECTION_COUNT}</span> OUTPUT
+          <span>{sectionCount}</span> OUTPUT
         </p>
-        <h2>{SECTION_COUNT}장 · 전환 퍼널 · 가성비</h2>
+        <h2>{sectionCount}장 · 전환 퍼널 · 가성비</h2>
         <div className="summary-frames" aria-hidden="true">
-          {Array.from({ length: SECTION_COUNT }, (_, i) => (
+          {Array.from({ length: sectionCount }, (_, i) => (
             <span key={i}>{String(i + 1).padStart(2, "0")}</span>
           ))}
         </div>
@@ -50,11 +52,11 @@ export function CreationSummary({ state, disabled }: Props) {
           </div>
           <div>
             <dt>결과 구성</dt>
-            <dd>문구 포함 완성 {SECTION_COUNT}장</dd>
+            <dd>문구 포함 완성 {sectionCount}장</dd>
           </div>
           <div>
             <dt>설득 순서</dt>
-            <dd>내가 정한 {SECTION_COUNT}단계</dd>
+            <dd>내가 정한 {sectionCount}단계</dd>
           </div>
           <div>
             <dt>장면 구성</dt>
@@ -68,12 +70,12 @@ export function CreationSummary({ state, disabled }: Props) {
         <div className="summary-note">
           <span aria-hidden="true">i</span>
           <p>
-            기획 1회와 이미지 {SECTION_COUNT}회의 OpenAI 사용료가 내 계정에 청구됩니다. 실패한 장은
+            기획 1회와 이미지 {sectionCount}회의 OpenAI 사용료가 내 계정에 청구됩니다. 실패한 장은
             자동으로 다시 시도하며, 이때도 사용료가 발생할 수 있어요.
           </p>
         </div>
         <button className="create-button" type="submit" disabled={disabled}>
-          <span>{buttonLabel(state.phase)}</span>
+          <span>{buttonLabel(state.phase, sectionCount)}</span>
           <b aria-hidden="true">→</b>
         </button>
         {state.message && (

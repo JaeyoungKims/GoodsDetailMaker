@@ -14,6 +14,7 @@ import {
   sectionPlanListSchema,
   type ProductBrief,
   type SectionPlan,
+  type StoryStage,
 } from "@gdm/shared";
 
 const OPENAI_BASE = "https://api.openai.com/v1";
@@ -108,7 +109,7 @@ type ResponseInputItem =
   | { role: "user"; content: Array<Record<string, unknown>> };
 
 /**
- * 기획 1회: 13개 섹션 설계를 structured output 으로 받는다.
+ * 기획 1회: 브리프의 storyOrder 길이만큼 섹션 설계를 structured output 으로 받는다.
  * 검증에 실패하면 오류 목록을 붙여 같은 대화에서 한 번 더 고치게 한다.
  */
 export async function planSections(
@@ -125,8 +126,9 @@ export async function planSections(
     image_url: `data:${img.contentType};base64,${base64(img.bytes)}`,
     detail: "low",
   }));
+  const storyOrder = input.brief.storyOrder;
   const conversation: ResponseInputItem[] = [
-    { role: "system", content: buildSystemPrompt() },
+    { role: "system", content: buildSystemPrompt(storyOrder) },
     {
       role: "user",
       content: [
@@ -142,7 +144,7 @@ export async function planSections(
   let lastIssues: string[] = [];
   for (let round = 0; round <= repairRounds; round += 1) {
     const text = await requestPlan(fetchImpl, apiKey, model, conversation);
-    const parsed = parsePlanText(text);
+    const parsed = parsePlanText(text, storyOrder);
     if (parsed.ok) return parsed.sections;
     lastIssues = parsed.issues;
     conversation.push({ role: "assistant", content: text });
@@ -186,6 +188,7 @@ async function requestPlan(
 /** 모델 출력 → 가벼운 정규화 → zod 검증. 실패하면 사람이 읽을 수 있는 오류 목록을 돌려준다. */
 export function parsePlanText(
   text: string,
+  storyOrder: readonly StoryStage[],
 ): { ok: true; sections: SectionPlan[] } | { ok: false; issues: string[] } {
   let raw: unknown;
   try {
@@ -197,7 +200,7 @@ export function parsePlanText(
     };
   }
   const normalized = normalizePlan(raw);
-  const result = sectionPlanListSchema.safeParse(normalized);
+  const result = sectionPlanListSchema(storyOrder).safeParse(normalized);
   if (result.success) return { ok: true, sections: result.data.sections };
   const issues = result.error.issues.map((issue) => {
     const path = issue.path.map(String).join(".");

@@ -34,17 +34,18 @@ const ext = (href: string, label: string) => (
 const CONTENT: Record<InfoKind, InfoContent> = {
   about: {
     eyebrow: "서비스 소개",
-    title: `상품 정보 한 번으로 구매 퍼널 ${SECTION_COUNT}장을 만듭니다`,
-    lead: `제품 사진과 알고 있는 정보만 입력하면, AI가 설득 순서 ${SECTION_COUNT}단계를 기획하고 각 단계를 독립된 이미지로 만들어 주는 BYOK 제작 도구입니다.`,
+    title: `상품 정보 한 번으로 구매 퍼널 최대 ${SECTION_COUNT}장을 만듭니다`,
+    lead: `제품 사진과 알고 있는 정보만 입력하면, AI가 내가 고른 설득 단계(최대 ${SECTION_COUNT}개)를 기획하고 각 단계를 독립된 이미지로 만들어 주는 BYOK 제작 도구입니다.`,
     sections: [
       {
-        title: `왜 한 장이 아니라 ${SECTION_COUNT}장인가요?`,
+        title: "왜 한 장이 아니라 여러 장인가요?",
         body: (
           <>
             <p>
               긴 상세페이지를 통째로 생성하면 한 군데만 마음에 안 들어도 전체를 다시 만들어야
-              합니다. 이 도구는 후킹부터 제품 정보까지 역할이 다른 {SECTION_COUNT}장을 각각 만들기
-              때문에, 실패했거나 아쉬운 장만 골라 다시 만들 수 있습니다.
+              합니다. 이 도구는 후킹부터 제품 정보까지 역할이 다른 장을 각각 만들기 때문에,
+              실패했거나 아쉬운 장만 골라 다시 만들 수 있습니다. 필요한 단계만 골라 짧게 만들 수도
+              있습니다.
             </p>
             <p>
               각 장은 {IMAGE_WIDTH}×{IMAGE_HEIGHT} 세로 이미지이고, 한글 문구는 브라우저에서 이미지
@@ -61,9 +62,7 @@ const CONTENT: Record<InfoKind, InfoContent> = {
               제품 사진 1~{INPUT_IMAGE_MAX}장과 상품명·장점·근거·금지 표현·스타일을 입력합니다.
               사진만 필수입니다.
             </li>
-            <li>
-              AI가 {SECTION_COUNT}단계 설득 흐름에 맞춰 장별 문구와 장면을 한 번에 기획합니다.
-            </li>
+            <li>AI가 내가 고른 설득 흐름에 맞춰 장별 문구와 장면을 한 번에 기획합니다.</li>
             <li>
               기획된 장면을 이미지 AI가 한 장씩 만듭니다. 완성된 장부터 바로 확인할 수 있습니다.
             </li>
@@ -112,9 +111,9 @@ const CONTENT: Record<InfoKind, InfoContent> = {
         body: (
           <>
             <p>
-              <strong>OpenAI 사용료는 본인 부담</strong>입니다. 작업 하나에 기획 1회와 이미지{" "}
-              {SECTION_COUNT}회가 들고, 실패한 장을 자동 재시도하거나 직접 다시 만들 때도 사용료가
-              추가됩니다.
+              <strong>OpenAI 사용료는 본인 부담</strong>입니다. 작업 하나에 기획 1회와 고른 장
+              수만큼의 이미지 생성이 들고, 실패한 장을 자동 재시도하거나 직접 다시 만들 때도
+              사용료가 추가됩니다.
             </p>
             <p>
               서버는 운영자의 PC에서 직접 실행되므로 별도 서버 비용이 없습니다. 아래 OpenAI 문서에서
@@ -192,9 +191,9 @@ const CONTENT: Record<InfoKind, InfoContent> = {
         title: "결과물 활용",
         body: (
           <p>
-            개별 JPG는 장마다 내려받고, ZIP은 {SECTION_COUNT}장을 한 번에, 세로 합본은 {IMAGE_WIDTH}
-            ×{IMAGE_HEIGHT * SECTION_COUNT} 한 장으로 이어 붙입니다. 플랫폼별 세로 길이 제한이
-            있으면 개별 JPG나 ZIP을 쓰세요.
+            개별 JPG는 장마다 내려받고, ZIP은 만든 장을 한 번에, 세로 합본은 폭 {IMAGE_WIDTH}에 장
+            수만큼(최대 {IMAGE_HEIGHT * SECTION_COUNT}) 이어 붙인 한 장입니다. 플랫폼별 세로 길이
+            제한이 있으면 개별 JPG나 ZIP을 쓰세요.
           </p>
         ),
       },

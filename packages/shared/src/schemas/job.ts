@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { LEGACY_SECTION_COUNT, SECTION_COUNT } from "../constants.js";
-import { SECTION_ROLES } from "../story.js";
+import { SECTION_COUNT } from "../constants.js";
 import { storyOrderSchema } from "./brief.js";
 import { sectionIndexSchema, sectionSchema } from "./section.js";
 
@@ -15,24 +14,25 @@ export const jobStatusSchema = z.enum([
 ]);
 export type JobStatus = z.infer<typeof jobStatusSchema>;
 
-const orderedSections = (count: number) =>
-  z
-    .array(sectionSchema)
-    .length(count)
-    .superRefine((sections, ctx) => {
-      sections.forEach((s, i) => {
-        if (s.index !== i + 1) {
-          ctx.addIssue({
-            code: "custom",
-            path: [i, "index"],
-            message: "Sections must be ordered.",
-          });
-        }
-        if (s.role !== SECTION_ROLES[i]) {
-          ctx.addIssue({ code: "custom", path: [i, "role"], message: "Role slot mismatch." });
-        }
-      });
+/**
+ * 섹션 배열: 기획 전이면 0개, 끝나면 1..SECTION_COUNT 개가 index 오름차순으로 온다.
+ * role 슬롯은 기획 결과를 받을 때(sectionPlanListSchema) 이미 검증했으므로 여기서는 순서만 본다.
+ * 단계 선택 기능 이전에 만든 작업은 role 배열 규칙이 지금과 달라, 여기서 다시 검증하면 열 수 없다.
+ */
+const orderedSections = z
+  .array(sectionSchema)
+  .max(SECTION_COUNT)
+  .superRefine((sections, ctx) => {
+    sections.forEach((s, i) => {
+      if (s.index !== i + 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: [i, "index"],
+          message: "Sections must be ordered.",
+        });
+      }
     });
+  });
 
 /** GET /api/jobs/:id 응답 */
 export const jobSchema = z.object({
@@ -40,11 +40,7 @@ export const jobSchema = z.object({
   productName: z.string().min(1).max(80),
   status: jobStatusSchema,
   storyOrder: storyOrderSchema,
-  sections: z.union([
-    z.array(z.never()).length(0),
-    orderedSections(LEGACY_SECTION_COUNT),
-    orderedSections(SECTION_COUNT),
-  ]),
+  sections: orderedSections,
   imageGenerationEnabled: z.boolean(),
   /** 기획 단계 등 작업 전체가 실패했을 때의 코드 (섹션이 없을 수 있다) */
   errorCode: z.string().nullable().optional(),

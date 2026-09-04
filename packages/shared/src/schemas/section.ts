@@ -7,7 +7,7 @@ import {
   SUBHEADLINE_MAX,
 } from "../constants.js";
 import { SECTION_ERROR_CODES } from "../errors.js";
-import { SECTION_ROLES } from "../story.js";
+import { SECTION_ROLES, STAGE_TO_ROLE, type StoryStage } from "../story.js";
 
 export const renderModeSchema = z.enum(["browser_overlay", "image_model_text"]);
 export type RenderMode = z.infer<typeof renderModeSchema>;
@@ -40,43 +40,47 @@ export const sectionPlanSchema = z.object({
 });
 export type SectionPlan = z.infer<typeof sectionPlanSchema>;
 
-/** 기획 결과 전체: 13개, index 순서·role 슬롯 고정, image_model_text 는 동일 visualDirection */
-export const sectionPlanListSchema = z
-  .object({ sections: z.array(sectionPlanSchema).length(SECTION_COUNT) })
-  .superRefine(({ sections }, ctx) => {
-    const sharedDirection = sections.find(
-      (s) => s.renderMode === "image_model_text",
-    )?.visualDirection;
-    sections.forEach((section, i) => {
-      const expectedIndex = i + 1;
-      const expectedRole = SECTION_ROLES[i];
-      if (section.index !== expectedIndex) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sections", i, "index"],
-          message: `Section ${expectedIndex} must have index ${expectedIndex}.`,
-        });
-      }
-      if (section.role !== expectedRole) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sections", i, "role"],
-          message: `Section ${expectedIndex} must use the ${expectedRole} role.`,
-        });
-      }
-      if (
-        section.renderMode === "image_model_text" &&
-        sharedDirection !== undefined &&
-        section.visualDirection !== sharedDirection
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["sections", i, "visualDirection"],
-          message: "All image-model sections must share one identical visualDirection.",
-        });
-      }
+/**
+ * 기획 결과 전체: storyOrder 길이만큼, index 는 1부터 순서대로.
+ * role 은 그 자리의 설득 단계가 정한다(STAGE_TO_ROLE). image_model_text 는 동일 visualDirection.
+ */
+export const sectionPlanListSchema = (storyOrder: readonly StoryStage[]) =>
+  z
+    .object({ sections: z.array(sectionPlanSchema).length(storyOrder.length) })
+    .superRefine(({ sections }, ctx) => {
+      const sharedDirection = sections.find(
+        (s) => s.renderMode === "image_model_text",
+      )?.visualDirection;
+      sections.forEach((section, i) => {
+        const expectedIndex = i + 1;
+        const expectedRole = STAGE_TO_ROLE[storyOrder[i]!];
+        if (section.index !== expectedIndex) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["sections", i, "index"],
+            message: `Section ${expectedIndex} must have index ${expectedIndex}.`,
+          });
+        }
+        if (section.role !== expectedRole) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["sections", i, "role"],
+            message: `Section ${expectedIndex} must use the ${expectedRole} role.`,
+          });
+        }
+        if (
+          section.renderMode === "image_model_text" &&
+          sharedDirection !== undefined &&
+          section.visualDirection !== sharedDirection
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["sections", i, "visualDirection"],
+            message: "All image-model sections must share one identical visualDirection.",
+          });
+        }
+      });
     });
-  });
 
 /** 사용자가 편집하는 카피 */
 const copyText = (max: number) =>
