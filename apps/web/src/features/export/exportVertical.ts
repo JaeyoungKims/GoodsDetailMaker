@@ -1,7 +1,7 @@
 import { IMAGE_HEIGHT, IMAGE_WIDTH } from "@gdm/shared";
 import { assertExportableSet } from "./download";
 
-/** 13장을 세로로 이어 붙인 합본 JPEG (1024 × 1536·N). 스마트스토어형 긴 상세페이지용. */
+/** 만든 장을 세로로 이어 붙인 합본 JPEG (1024 × 1536·N). 스마트스토어형 긴 상세페이지용. */
 export async function exportVertical(
   blobs: Blob[],
   options: { signal?: AbortSignal } = {},

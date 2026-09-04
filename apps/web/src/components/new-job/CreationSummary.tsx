@@ -29,7 +29,7 @@ export function CreationSummary({ state, disabled, sectionCount }: Props) {
         <p className="page-eyebrow">
           <span>{sectionCount}</span> OUTPUT
         </p>
-        <h2>{sectionCount}장 · 전환 퍼널 · 가성비</h2>
+        <h2>{sectionCount}장 · 구매 흐름 · 가성비</h2>
         <div className="summary-frames" aria-hidden="true">
           {Array.from({ length: sectionCount }, (_, i) => (
             <span key={i}>{String(i + 1).padStart(2, "0")}</span>

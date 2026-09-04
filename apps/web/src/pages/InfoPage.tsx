@@ -34,7 +34,7 @@ const ext = (href: string, label: string) => (
 const CONTENT: Record<InfoKind, InfoContent> = {
   about: {
     eyebrow: "서비스 소개",
-    title: `상품 정보 한 번으로 구매 퍼널 최대 ${SECTION_COUNT}장을 만듭니다`,
+    title: `상품 정보 한 번으로 구매 흐름 최대 ${SECTION_COUNT}장을 만듭니다`,
     lead: `제품 사진과 알고 있는 정보만 입력하면, AI가 내가 고른 설득 단계(최대 ${SECTION_COUNT}개)를 기획하고 각 단계를 독립된 이미지로 만들어 주는 BYOK 제작 도구입니다.`,
     sections: [
       {

@@ -248,7 +248,7 @@ function JobView({ jobId }: { jobId: string }) {
           <span>1</span>
           <span>2</span>
           <span>3</span>
-          <strong>{job.storyOrder.length}단계 전환 퍼널을 기획하고 있어요</strong>
+          <strong>{job.storyOrder.length}단계 구매 흐름을 기획하고 있어요</strong>
           <p>선택한 설득 흐름대로 기획한 뒤, 각 이미지를 따로 생성합니다.</p>
         </section>
       ) : (

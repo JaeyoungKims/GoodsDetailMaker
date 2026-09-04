@@ -23,7 +23,7 @@ export function StylePicker({ value, onChange }: Props) {
   return (
     <div className="field field--wide" role="radiogroup" aria-labelledby="tone-label">
       <span id="tone-label">
-        상세페이지 스타일 <b>13장 공통</b>
+        상세페이지 스타일 <b>모든 장 공통</b>
       </span>
       <div className="tone-chips">
         {TONES.map((tone) => {

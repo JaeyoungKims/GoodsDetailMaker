@@ -96,8 +96,7 @@ export function NewJobPage() {
           </h1>
           <p className="creation-hero__lead">
             제품 이미지만 올려도 AI가 상품을 분석합니다. 아는 정보만 더하면 판매 문구와 디자인까지
-            장별로 기획하고, 콜라주가 아닌 전환 퍼널 완성 이미지 {sectionCount}장으로 각각
-            생성합니다.
+            장별로 기획하고, 콜라주가 아닌 완성 이미지 {sectionCount}장으로 각각 생성합니다.
           </p>
         </div>
         <ul className="creation-points" aria-label="제작 방식">

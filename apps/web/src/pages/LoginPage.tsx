@@ -89,11 +89,9 @@ export function LoginPage() {
         <h1>
           한 번 입력하고,
           <br />
-          <em>전환 퍼널 13장을</em> 만드세요
+          <em>구매까지 이어지는 상세페이지를</em> 만드세요
         </h1>
-        <p>
-          상품 하나를 등록하면 AI가 구매까지 이어지는 13단계를 기획하고 각각 독립적으로 생성합니다.
-        </p>
+        <p>상품 하나를 등록하면 AI가 필요한 설득 단계를 기획하고 각 장을 독립적으로 생성합니다.</p>
         <ol className="login-flow">
           <li>
             <span>01</span>
@@ -105,7 +103,7 @@ export function LoginPage() {
           <li>
             <span>02</span>
             <p>
-              <strong>13장 독립 생성</strong>
+              <strong>장별 독립 생성</strong>
               <small>각 이미지가 병렬로 처리</small>
             </p>
           </li>
