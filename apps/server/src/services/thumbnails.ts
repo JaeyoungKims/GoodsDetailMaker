@@ -47,14 +47,24 @@ export async function getThumbnail(
   return row ?? null;
 }
 
-/** 작업을 만들 때 옵션 수만큼 행을 미리 만든다. 메인은 사용자가 요청할 때만 생긴다. */
-export async function insertOptionThumbnails(
+/**
+ * 작업을 만들 때 썸네일 행을 미리 만든다.
+ * 마켓 목록에 걸 썸네일은 옵션이 있든 없든 필요하다. 옵션이 없으면 메인 한 장을 만들고,
+ * 옵션이 있으면 옵션마다 한 장씩 만든다(그때의 메인은 브라우저 격자 합성이 기본).
+ */
+export async function insertJobThumbnails(
   sql: Sql,
   userId: string,
   jobId: string,
   options: ProductOption[],
 ) {
-  if (options.length === 0) return;
+  if (options.length === 0) {
+    await sql`
+      insert into job_thumbnails (job_id, user_id, kind, option_index, name, status)
+      values (${jobId}, ${userId}, 'main', 0, '', 'queued')
+      on conflict do nothing`;
+    return;
+  }
   const rows = options.map((option, i) => ({
     job_id: jobId,
     user_id: userId,

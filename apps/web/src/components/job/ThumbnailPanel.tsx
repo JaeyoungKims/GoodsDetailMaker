@@ -159,52 +159,58 @@ export function ThumbnailPanel({
 
   if (thumbnails.length === 0) return null;
   const mainPreview = previews.get(MAIN_KEY) ?? null;
+  const hasOptions = options.length > 0;
 
   return (
     <section className="thumb-panel" aria-labelledby="thumb-title">
       <div className="thumb-panel__head">
         <div>
-          <p className="eyebrow">마켓 썸네일</p>
+          <p className="eyebrow">썸네일</p>
           <h2 id="thumb-title">
-            옵션 {options.length}개 · {THUMB_EXPORT_SIZE}×{THUMB_EXPORT_SIZE}
+            {hasOptions ? `옵션 ${options.length}개와 대표 이미지` : "목록에 걸 대표 이미지"}
           </h2>
         </div>
-        <small>목록 노출용 정사각 이미지예요. 문구는 넣지 않습니다.</small>
+        <small>
+          스마트스토어·쿠팡 목록에 뜨는 {THUMB_EXPORT_SIZE}×{THUMB_EXPORT_SIZE} 정사각 이미지예요.
+          글자 없이 상품만 담아요.
+        </small>
       </div>
 
       <div className="thumb-grid">
-        <article className="thumb-card thumb-card--main">
-          <header>
-            <strong>메인 썸네일</strong>
-            <span>{grid ? "옵션 모아보기" : "옵션 준비 중"}</span>
-          </header>
-          {grid ? (
-            <img src={grid.url} alt="옵션을 모은 메인 썸네일" />
-          ) : (
-            <div className="thumb-empty">옵션 썸네일이 모두 완성되면 자동으로 만들어져요</div>
-          )}
-          <footer>
-            <button
-              type="button"
-              disabled={!grid}
-              onClick={() => grid && download(grid.blob, "thumb-main.jpg")}
-            >
-              내려받기
-            </button>
-            <button type="button" onClick={onRequestMain}>
-              AI로 한 장면 만들기
-            </button>
-          </footer>
-        </article>
+        {hasOptions && (
+          <article className="thumb-card thumb-card--main">
+            <header>
+              <strong>대표 이미지</strong>
+              <span>{grid ? "옵션 모음" : "준비 중"}</span>
+            </header>
+            {grid ? (
+              <img src={grid.url} alt="옵션을 모아 만든 대표 이미지" />
+            ) : (
+              <div className="thumb-empty">옵션 이미지가 다 되면 한 장으로 모아 드려요</div>
+            )}
+            <footer>
+              <button
+                type="button"
+                disabled={!grid}
+                onClick={() => grid && download(grid.blob, "thumb-main.jpg")}
+              >
+                내려받기
+              </button>
+              <button type="button" onClick={onRequestMain}>
+                AI로 따로 만들기
+              </button>
+            </footer>
+          </article>
+        )}
 
         {aiMain && (
-          <article className="thumb-card">
+          <article className={hasOptions ? "thumb-card" : "thumb-card thumb-card--main"}>
             <header>
-              <strong>메인 (AI 배치)</strong>
+              <strong>{hasOptions ? "AI가 만든 대표 이미지" : "대표 이미지"}</strong>
               <span>{STATUS_LABEL[aiMain.status] ?? aiMain.status}</span>
             </header>
             {mainPreview ? (
-              <img src={mainPreview.url} alt="AI가 배치한 메인 썸네일" />
+              <img src={mainPreview.url} alt="AI가 만든 대표 이미지" />
             ) : (
               <div className="thumb-empty">
                 {aiMain.status === "failed"
@@ -216,13 +222,16 @@ export function ThumbnailPanel({
               <button
                 type="button"
                 disabled={!mainPreview}
-                onClick={() => mainPreview && download(mainPreview.blob, "thumb-main-ai.jpg")}
+                onClick={() =>
+                  mainPreview &&
+                  download(mainPreview.blob, hasOptions ? "thumb-main-ai.jpg" : "thumb-main.jpg")
+                }
               >
                 내려받기
               </button>
-              {aiMain.status === "failed" && (
+              {aiMain.status !== "generating" && aiMain.status !== "queued" && (
                 <button type="button" onClick={() => onRetry("main", 0)}>
-                  다시 시도
+                  {aiMain.status === "failed" ? "다시 시도" : "다시 만들기"}
                 </button>
               )}
             </footer>

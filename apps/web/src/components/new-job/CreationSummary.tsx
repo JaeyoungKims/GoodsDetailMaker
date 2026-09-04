@@ -4,8 +4,10 @@ import type { CreateJobState } from "@/features/jobs/useCreateJob";
 interface Props {
   state: CreateJobState;
   disabled: boolean;
-  /** 사용자가 고른 설득 단계 수 = 만들 장 수 */
+  /** 사용자가 고른 설득 단계 수 = 본문 장 수 */
   sectionCount: number;
+  /** 함께 만드는 마켓 썸네일 장 수 (옵션 수, 옵션이 없으면 대표 1장) */
+  thumbCount: number;
 }
 
 function buttonLabel(phase: CreateJobState["phase"], sectionCount: number): string {
@@ -22,7 +24,7 @@ function buttonLabel(phase: CreateJobState["phase"], sectionCount: number): stri
 }
 
 /** 우측 고정 요약 카드 + 제출 버튼 */
-export function CreationSummary({ state, disabled, sectionCount }: Props) {
+export function CreationSummary({ state, disabled, sectionCount, thumbCount }: Props) {
   return (
     <aside className="creation-summary">
       <div className="creation-summary__card">
@@ -52,7 +54,9 @@ export function CreationSummary({ state, disabled, sectionCount }: Props) {
           </div>
           <div>
             <dt>결과 구성</dt>
-            <dd>문구 포함 완성 {sectionCount}장</dd>
+            <dd>
+              본문 {sectionCount}장 + 썸네일 {thumbCount}장
+            </dd>
           </div>
           <div>
             <dt>설득 순서</dt>
@@ -70,8 +74,8 @@ export function CreationSummary({ state, disabled, sectionCount }: Props) {
         <div className="summary-note">
           <span aria-hidden="true">i</span>
           <p>
-            기획 1회와 이미지 {sectionCount}회의 OpenAI 사용료가 내 계정에 청구됩니다. 실패한 장은
-            자동으로 다시 시도하며, 이때도 사용료가 발생할 수 있어요.
+            기획 1회와 이미지 {sectionCount + thumbCount}회의 OpenAI 사용료가 내 계정에 청구됩니다.
+            실패한 장은 자동으로 다시 시도하며, 이때도 사용료가 발생할 수 있어요.
           </p>
         </div>
         <button className="create-button" type="submit" disabled={disabled}>

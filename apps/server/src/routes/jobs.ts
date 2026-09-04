@@ -32,7 +32,7 @@ import { getSettings } from "../services/settings.js";
 import { storageKeys } from "../services/storage.js";
 import {
   getThumbnail,
-  insertOptionThumbnails,
+  insertJobThumbnails,
   listThumbnails,
   upsertMainThumbnail,
 } from "../services/thumbnails.js";
@@ -100,7 +100,7 @@ export const jobRoutes = new Hono<HonoEnv>()
       insert into jobs (id, user_id, status, product_name, brief, story_order, section_count, expires_at)
       values (${idempotencyKey.data}, ${user.id}, 'draft', ${brief.data.productName}, ${sql.json(brief.data as never)},
               ${brief.data.storyOrder}, ${brief.data.storyOrder.length}, ${expiresAt})`;
-    await insertOptionThumbnails(sql, user.id, idempotencyKey.data, brief.data.options);
+    await insertJobThumbnails(sql, user.id, idempotencyKey.data, brief.data.options);
     return c.json({ id: idempotencyKey.data }, 201);
   })
 
@@ -258,9 +258,6 @@ export const jobRoutes = new Hono<HonoEnv>()
   /** 메인 썸네일을 AI 로 한 장면에 배치한다. 기본 메인은 브라우저 격자 합성이라 서버를 쓰지 않는다. */
   .post("/:jobId/thumbnails/main", async (c) => {
     const { sql, job } = await requireJob(c);
-    const thumbnails = await listThumbnails(sql, job.id);
-    if (!thumbnails.some((t) => t.kind === "option"))
-      throw new ApiError("THUMBNAIL_OPTIONS_REQUIRED", 409);
     await upsertMainThumbnail(sql, job.user_id, job.id);
     const enabled = c.get("ctx").config.IMAGE_GENERATION_ENABLED;
     if (enabled)

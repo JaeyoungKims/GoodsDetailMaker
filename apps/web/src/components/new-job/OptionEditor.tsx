@@ -36,8 +36,9 @@ export function OptionEditor({ options, onChange }: Props) {
   return (
     <div className="option-editor">
       <p className="option-editor__lead">
-        색상·용량처럼 고를 수 있는 옵션이 있으면 적어 주세요. 옵션마다 정사각 썸네일 1장을 만들고,
-        여러 옵션을 한 장에 모은 메인 썸네일도 만들어 드려요. 옵션이 없으면 비워 두세요.
+        색상·용량처럼 고를 수 있는 옵션이 있으면 적어 주세요. 옵션마다 썸네일을 한 장씩 만들고, 그걸
+        모아 대표 이미지도 만들어 드려요. 옵션이 없으면 비워 두세요. 그때는 대표 이미지 한 장만
+        만듭니다.
       </p>
 
       {options.length > 0 && (
@@ -91,8 +92,8 @@ export function OptionEditor({ options, onChange }: Props) {
         + 옵션 추가 ({options.length}/{OPTION_MAX})
       </button>
       <small className="option-editor__note">
-        옵션 사진을 넣지 않으면 상품 기준 이미지로 만들어요. 옵션 사진은 상세페이지 본문 기획에는
-        쓰이지 않습니다.
+        옵션 사진을 넣지 않으면 위에서 올린 상품 사진으로 만들어요. 옵션 사진은 본문 13장 기획에는
+        쓰이지 않아 상품 색이 섞이지 않습니다.
       </small>
     </div>
   );

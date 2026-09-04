@@ -34,6 +34,8 @@ export function NewJobPage() {
 
   const locked = state.phase === "submitting" || state.phase === "done";
   const sectionCount = storyOrder.length;
+  // 옵션이 없어도 마켓에 걸 대표 이미지 한 장은 만든다
+  const thumbCount = options.filter((o) => o.name.trim()).length || 1;
 
   /** 마지막 한 단계는 뺄 수 없다 (최소 1장) */
   function toggleStage(stage: StoryStage) {
@@ -257,7 +259,12 @@ export function NewJobPage() {
           </fieldset>
         </div>
 
-        <CreationSummary state={state} disabled={locked} sectionCount={sectionCount} />
+        <CreationSummary
+          state={state}
+          disabled={locked}
+          sectionCount={sectionCount}
+          thumbCount={thumbCount}
+        />
       </form>
     </main>
   );
